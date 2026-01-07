@@ -75,6 +75,44 @@ var rootCmd = &cobra.Command{
 	Version:       Version,
 }
 
+func init() {
+	// Custom help template with banner
+	rootCmd.SetHelpTemplate(`╔════════════════════════════════════════════╗
+║         🔍 FLUTTERGUARD-CLI v1.0.0        ║
+║  Local APK Security Analysis Tool         ║
+╚════════════════════════════════════════════╝
+
+{{.Short}}
+
+USAGE:
+  {{.UseLine}}
+
+{{if .Long}}DESCRIPTION:
+  {{.Long}}
+
+{{end}}{{if .HasAvailableFlags}}OPTIONS:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
+
+{{end}}{{if .HasAvailableSubCommands}}COMMANDS:
+{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}
+{{end}}EXAMPLES:
+  # Analyze APK with structured output (recommended)
+  {{.CommandPath}} --apk app.apk --outDir ./results --verbose
+
+  # Quick text report
+  {{.CommandPath}} --apk app.apk --format text
+
+  # Offline analysis (default)
+  {{.CommandPath}} --apk app.apk --outDir ./results
+
+  # Enable network checks for full validation
+  {{.CommandPath}} --apk app.apk --outDir ./results --enable-network-and-dns-checks
+
+For more information, visit: https://github.com/flutterguard/flutterguard-cli
+`)
+}
+
 // Execute runs the root Cobra command
 func Execute() {
 	// Flags
