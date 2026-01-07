@@ -91,15 +91,11 @@ func init() {
 / /   | | |_| | |_| ||  __/ | / /_\\\ \_/ / (_| | | | (_| |
 \/    |_|\__,_|\__|\__\___|_| \____/ \___/ \__,_|_|  \__,_|
                                                            
-v{{.Version}}
-
-{{.Short}}
 
 USAGE:
   {{.UseLine}}
 
-{{if .Long}}DESCRIPTION:
-  {{.Long}}
+
 
 {{end}}{{if .HasAvailableFlags}}OPTIONS:
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
