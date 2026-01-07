@@ -216,46 +216,97 @@ func saveStructuredOutput(results *models.Results, config *CLIConfig) error {
 		return fmt.Errorf("failed to write analysis: %w", err)
 	}
 
-	if config.Verbose {
-		fmt.Printf("\nStructured output saved to: %s\n", outDir)
-		fmt.Println("Files created:")
-		fmt.Println("  - summary.md (human-readable report with navigation)")
-		fmt.Println("  - analysis.json (full JSON results)")
-		if len(results.Emails) > 0 {
-			fmt.Println("  - emails.txt")
-		}
-		if len(results.Domains) > 0 {
-			fmt.Println("  - domains.txt")
-		}
-		if len(allURLs) > 0 {
-			fmt.Println("  - urls.txt")
-		}
-		if len(results.APIEndpoints) > 0 {
-			fmt.Println("  - api_endpoints.txt")
-		}
-		if len(results.Packages) > 0 {
-			fmt.Println("  - packages.txt")
-		}
-		if len(results.Permissions) > 0 {
-			fmt.Println("  - permissions.txt")
-		}
-		if len(results.HardcodedKeys) > 0 {
-			fmt.Println("  - hardcoded_keys.txt")
-		}
-		if len(results.Services) > 0 {
-			fmt.Println("  - services.txt")
-		}
-		if len(allAssets) > 0 {
-			fmt.Println("  - assets/ (files grouped by extension)")
-		}
-		if results.DecompiledDirPath != "" {
-			if _, err := os.Stat(filepath.Join(outDir, "decompiled")); err == nil {
-				fmt.Println("  - decompiled/ (full decompiled APK contents)")
-			}
+	// Display summary to user
+	displayOutputSummary(results, outDir, allURLs, len(allAssets), results.DecompiledDirPath != "", config.Verbose)
+
+	return nil
+}
+
+func displayOutputSummary(results *models.Results, outDir string, allURLs []string, assetCount int, hasDecompiled bool, verbose bool) {
+	fmt.Fprintf(os.Stderr, "\n📊 Analysis Results:\n")
+	fmt.Fprintf(os.Stderr, "   Saved to: %s\n\n", outDir)
+
+	// Create a summary stats display
+	stats := make([]string, 0)
+
+	if len(results.Emails) > 0 {
+		stats = append(stats, fmt.Sprintf("   📧 Emails: %d", len(results.Emails)))
+	}
+	if len(results.Domains) > 0 {
+		stats = append(stats, fmt.Sprintf("   🌐 Domains: %d", len(results.Domains)))
+	}
+	if len(allURLs) > 0 {
+		stats = append(stats, fmt.Sprintf("   🔗 URLs: %d", len(allURLs)))
+	}
+	if len(results.APIEndpoints) > 0 {
+		stats = append(stats, fmt.Sprintf("   🔌 API Endpoints: %d", len(results.APIEndpoints)))
+	}
+	if len(results.Packages) > 0 {
+		stats = append(stats, fmt.Sprintf("   📦 Packages: %d", len(results.Packages)))
+	}
+	if len(results.Permissions) > 0 {
+		stats = append(stats, fmt.Sprintf("   🛡️  Permissions: %d", len(results.Permissions)))
+	}
+	if len(results.HardcodedKeys) > 0 {
+		stats = append(stats, fmt.Sprintf("   🔑 Secrets: %d", len(results.HardcodedKeys)))
+	}
+	if len(results.Services) > 0 {
+		stats = append(stats, fmt.Sprintf("   🔗 Services: %d", len(results.Services)))
+	}
+	if assetCount > 0 {
+		stats = append(stats, fmt.Sprintf("   🎨 Assets: %d files", assetCount))
+	}
+	if hasDecompiled {
+		stats = append(stats, fmt.Sprintf("   📁 Decompiled: Full APK source"))
+	}
+
+	// Display stats in columns
+	for i := 0; i < len(stats); i++ {
+		fmt.Fprintf(os.Stderr, "%s", stats[i])
+		if (i+1)%2 == 0 || i == len(stats)-1 {
+			fmt.Fprintf(os.Stderr, "\n")
+		} else {
+			fmt.Fprintf(os.Stderr, " | ")
 		}
 	}
 
-	return nil
+	if verbose {
+		fmt.Fprintf(os.Stderr, "\n📝 Files created:\n")
+		fmt.Fprintf(os.Stderr, "   ✓ summary.md (start here!)\n")
+		fmt.Fprintf(os.Stderr, "   ✓ analysis.json (full data)\n")
+		if len(results.Emails) > 0 {
+			fmt.Fprintf(os.Stderr, "   ✓ emails.txt\n")
+		}
+		if len(results.Domains) > 0 {
+			fmt.Fprintf(os.Stderr, "   ✓ domains.txt\n")
+		}
+		if len(allURLs) > 0 {
+			fmt.Fprintf(os.Stderr, "   ✓ urls.txt\n")
+		}
+		if len(results.APIEndpoints) > 0 {
+			fmt.Fprintf(os.Stderr, "   ✓ api_endpoints.txt\n")
+		}
+		if len(results.Packages) > 0 {
+			fmt.Fprintf(os.Stderr, "   ✓ packages.txt\n")
+		}
+		if len(results.Permissions) > 0 {
+			fmt.Fprintf(os.Stderr, "   ✓ permissions.txt\n")
+		}
+		if len(results.HardcodedKeys) > 0 {
+			fmt.Fprintf(os.Stderr, "   ✓ hardcoded_keys.txt\n")
+		}
+		if len(results.Services) > 0 {
+			fmt.Fprintf(os.Stderr, "   ✓ services.txt\n")
+		}
+		if assetCount > 0 {
+			fmt.Fprintf(os.Stderr, "   ✓ assets/ (organized by file type)\n")
+		}
+		if hasDecompiled {
+			fmt.Fprintf(os.Stderr, "   ✓ decompiled/ (full APK source)\n")
+		}
+	}
+
+	fmt.Fprintf(os.Stderr, "\n💡 Tip: Open summary.md in your editor or GitHub to see everything organized!\n\n")
 }
 
 func sanitizeFileName(name string) string {

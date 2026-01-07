@@ -15,6 +15,7 @@ FlutterGuard CLI gives you the inside scoop on any Android app:
 - 📁 **Full Breakdown** — organized assets, resources, and complete decompiled code
 
 **Why you'll love it:**
+
 - 🔒 **Privacy first** — runs offline by default, network features are opt-in
 - 📊 **Well-organized output** — generates a clean directory with categorized files and a navigable report
 - ⚡ **Smart decompilation** — uses fast ZIP extraction by default, falls back to JADX if needed
@@ -53,6 +54,7 @@ sudo cp build/flutterguard-cli /usr/local/bin/
 ```
 
 **What you need:**
+
 - Go 1.21+
 - That's it! (Everything else is optional)
 
@@ -63,8 +65,8 @@ FlutterGuard works great on its own, but these tools level up the analysis:
 - **AAPT2** — gives you richer APK metadata
   - Linux: `sudo apt install aapt`
   - macOS: Install via Android SDK
-  
 - **JADX** — better Java decompilation (we use ZIP extraction by default)
+
   - Get it: https://github.com/skylot/jadx/releases
   - Or: `brew install jadx`
 
@@ -105,15 +107,15 @@ flutterguard-cli --apk app.apk --outDir ./results --enable-network-and-dns-check
 
 ### All Available Options
 
-| Flag | What it does | Default |
-|------|------------|---------|
-| `--apk` | The APK file to analyze **(required)** | — |
-| `--outDir` | Where to save the results folder | stdout |
-| `--format` | Output style: `json` or `text` | `json` |
-| `--verbose` | Show progress as it runs | off |
-| `--enable-network-and-dns-checks` | Enable online features | off |
-| `--version` | Show version number | — |
-| `--help` | Show all options | — |
+| Flag                              | What it does                           | Default |
+| --------------------------------- | -------------------------------------- | ------- |
+| `--apk`                           | The APK file to analyze **(required)** | —       |
+| `--outDir`                        | Where to save the results folder       | stdout  |
+| `--format`                        | Output style: `json` or `text`         | `json`  |
+| `--verbose`                       | Show progress as it runs               | off     |
+| `--enable-network-and-dns-checks` | Enable online features                 | off     |
+| `--version`                       | Show version number                    | —       |
+| `--help`                          | Show all options                       | —       |
 
 ## What You Get
 
@@ -247,6 +249,7 @@ go test ./...
 ### Found a Bug?
 
 Open an [issue](https://github.com/flutterguard/flutterguard-cli/issues) and tell us:
+
 - What you were trying to do
 - What went wrong
 - What you expected to happen
