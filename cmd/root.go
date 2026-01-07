@@ -28,6 +28,14 @@ var rootCmd = &cobra.Command{
 	Use:   "flutterguard",
 	Short: "Local APK security analysis tool",
 	Long:  "FlutterGuard CLI analyzes Android APKs (especially Flutter apps) for security insights and metadata.",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// If no arguments provided, show help instead of error
+		if len(os.Args) == 1 {
+			_ = cmd.Help()
+			os.Exit(0)
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if showVersion {
 			fmt.Printf("FlutterGuard CLI v%s\n", Version)
