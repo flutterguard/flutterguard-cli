@@ -84,11 +84,14 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	// Custom help template with banner
-	rootCmd.SetHelpTemplate(`╔════════════════════════════════════════════╗
-║         🔍 FLUTTERGUARD-CLI v1.0.0        ║
-║  Local APK Security Analysis Tool         ║
-╚════════════════════════════════════════════╝
+	// Custom help template with ASCII art banner
+	rootCmd.SetHelpTemplate(`   ___ _       _   _             ___                     _ 
+  / __\ |_   _| |_| |_ ___ _ __ / _ \/\ /\  __ _ _ __ __| |
+ / _\ | | | | | __| __/ _ \ '__/ /_\/ / \ \/ _` + "`" + ` | '__/ _` + "`" + ` |
+/ /   | | |_| | |_| ||  __/ | / /_\\\ \_/ / (_| | | | (_| |
+\/    |_|\__,_|\__|\__\___|_| \____/ \___/ \__,_|_|  \__,_|
+                                                           
+v{{.Version}}
 
 {{.Short}}
 
