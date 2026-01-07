@@ -30,3 +30,4 @@ apk/
 Thumbs.db
 output/
 apk/
+.dart_tool/
