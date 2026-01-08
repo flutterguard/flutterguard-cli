@@ -233,7 +233,7 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 	fmt.Fprintf(os.Stderr, "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	fmt.Fprintf(os.Stderr, "📊 ANALYSIS RESULTS\n")
 	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
-	
+
 	// App Info Section
 	if pkg != "" {
 		fmt.Fprintf(os.Stderr, "📦 APP INFORMATION\n")
@@ -271,7 +271,7 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 		{"🔗 Services", len(results.Services)},
 		{"🎨 Assets", assetCount},
 	}
-	
+
 	// Print stats in two columns
 	fmt.Fprintf(os.Stderr, "📊 FINDINGS SUMMARY\n")
 	printed := 0
@@ -405,7 +405,9 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 	}
 
 	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	fmt.Fprintf(os.Stderr, "💡 Next: Open summary.md to review findings\n")
+	fmt.Fprintf(os.Stderr, "� Results saved to:\n")
+	fmt.Fprintf(os.Stderr, "   %s\n", outDir)
+	fmt.Fprintf(os.Stderr, "💡 Start with: summary.md\n")
 	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 }
 
