@@ -16,7 +16,7 @@ func NewCDNUIDetector() *CDNUIDetector {
 
 // DetectCDNs detects CDN usage from domains and content
 func (cud *CDNUIDetector) DetectCDNs(content string, domains []string, urlCollection models.URLCollection) []models.CDNInfo {
-	// Convert URLCollection to map[string][]string for compatibility
+
 	urls := map[string][]string{
 		"http":    urlCollection.HTTP,
 		"https":   urlCollection.HTTPS,
@@ -27,87 +27,73 @@ func (cud *CDNUIDetector) DetectCDNs(content string, domains []string, urlCollec
 		"content": urlCollection.Content,
 		"other":   urlCollection.Other,
 	}
-	
+
 	var cdns []models.CDNInfo
 	contentLower := strings.ToLower(content)
-	
-	// Cloudflare
+
 	if cdn := cud.detectCloudflare(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// Akamai
+
 	if cdn := cud.detectAkamai(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// Fastly
+
 	if cdn := cud.detectFastly(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// Amazon CloudFront
+
 	if cdn := cud.detectCloudFront(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// Google Cloud CDN
+
 	if cdn := cud.detectGoogleCDN(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// Azure CDN
+
 	if cdn := cud.detectAzureCDN(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// StackPath
+
 	if cdn := cud.detectStackPath(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// KeyCDN
+
 	if cdn := cud.detectKeyCDN(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// CDN77
+
 	if cdn := cud.detectCDN77(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// BunnyCDN
+
 	if cdn := cud.detectBunnyCDN(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// Limelight Networks
+
 	if cdn := cud.detectLimelight(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// CloudFlare-Images/Stream
+
 	if cdn := cud.detectCloudflareMedia(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// imgix
+
 	if cdn := cud.detectImgix(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
-	// jsDelivr
+
 	if cdn := cud.detectjsDelivr(contentLower, domains, urls); cdn != nil {
 		cdns = append(cdns, *cdn)
 	}
-	
+
 	return cdns
 }
 
 func (cud *CDNUIDetector) detectCloudflare(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"cloudflare", "cf-ray", "cloudflaressl.com"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "cloudflare") {
 		return &models.CDNInfo{
 			Name:    "Cloudflare",
@@ -120,7 +106,7 @@ func (cud *CDNUIDetector) detectCloudflare(content string, domains []string, url
 func (cud *CDNUIDetector) detectAkamai(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"akamai", "akamaihd.net", "akamaitechnologies"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "akamai") {
 		return &models.CDNInfo{
 			Name:    "Akamai",
@@ -133,7 +119,7 @@ func (cud *CDNUIDetector) detectAkamai(content string, domains []string, urls ma
 func (cud *CDNUIDetector) detectFastly(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"fastly", "fastly.net"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "fastly") {
 		return &models.CDNInfo{
 			Name:    "Fastly",
@@ -146,7 +132,7 @@ func (cud *CDNUIDetector) detectFastly(content string, domains []string, urls ma
 func (cud *CDNUIDetector) detectCloudFront(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"cloudfront.net", "cloudfront"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "cloudfront") {
 		return &models.CDNInfo{
 			Name:    "Amazon CloudFront",
@@ -159,7 +145,7 @@ func (cud *CDNUIDetector) detectCloudFront(content string, domains []string, url
 func (cud *CDNUIDetector) detectGoogleCDN(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"gstatic.com", "googleusercontent.com"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 {
 		return &models.CDNInfo{
 			Name:    "Google Cloud CDN",
@@ -172,7 +158,7 @@ func (cud *CDNUIDetector) detectGoogleCDN(content string, domains []string, urls
 func (cud *CDNUIDetector) detectAzureCDN(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"azureedge.net", "azure-cdn"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "azureedge") {
 		return &models.CDNInfo{
 			Name:    "Microsoft Azure CDN",
@@ -185,7 +171,7 @@ func (cud *CDNUIDetector) detectAzureCDN(content string, domains []string, urls 
 func (cud *CDNUIDetector) detectStackPath(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"stackpath", "stackpathcdn.com"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "stackpath") {
 		return &models.CDNInfo{
 			Name:    "StackPath",
@@ -198,7 +184,7 @@ func (cud *CDNUIDetector) detectStackPath(content string, domains []string, urls
 func (cud *CDNUIDetector) detectKeyCDN(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"keycdn", "kxcdn.com"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "keycdn") {
 		return &models.CDNInfo{
 			Name:    "KeyCDN",
@@ -211,7 +197,7 @@ func (cud *CDNUIDetector) detectKeyCDN(content string, domains []string, urls ma
 func (cud *CDNUIDetector) detectCDN77(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"cdn77", "cdn77.org"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "cdn77") {
 		return &models.CDNInfo{
 			Name:    "CDN77",
@@ -224,7 +210,7 @@ func (cud *CDNUIDetector) detectCDN77(content string, domains []string, urls map
 func (cud *CDNUIDetector) detectBunnyCDN(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"bunny.net", "bunnycdn"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "bunnycdn") {
 		return &models.CDNInfo{
 			Name:    "BunnyCDN",
@@ -237,7 +223,7 @@ func (cud *CDNUIDetector) detectBunnyCDN(content string, domains []string, urls 
 func (cud *CDNUIDetector) detectLimelight(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"limelight", "llnwd.net"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "limelight") {
 		return &models.CDNInfo{
 			Name:    "Limelight Networks",
@@ -250,7 +236,7 @@ func (cud *CDNUIDetector) detectLimelight(content string, domains []string, urls
 func (cud *CDNUIDetector) detectCloudflareMedia(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"cloudflarestream.com", "imagedelivery.net"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 {
 		return &models.CDNInfo{
 			Name:    "Cloudflare Images/Stream",
@@ -263,7 +249,7 @@ func (cud *CDNUIDetector) detectCloudflareMedia(content string, domains []string
 func (cud *CDNUIDetector) detectImgix(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"imgix.net", "imgix.com"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "imgix") {
 		return &models.CDNInfo{
 			Name:    "imgix",
@@ -276,7 +262,7 @@ func (cud *CDNUIDetector) detectImgix(content string, domains []string, urls map
 func (cud *CDNUIDetector) detectjsDelivr(content string, domains []string, urls map[string][]string) *models.CDNInfo {
 	indicators := []string{"jsdelivr.net", "jsdelivr"}
 	detectedDomains := filterDomainsByPatterns(domains, indicators)
-	
+
 	if len(detectedDomains) > 0 || strings.Contains(content, "jsdelivr") {
 		return &models.CDNInfo{
 			Name:    "jsDelivr",
@@ -290,42 +276,35 @@ func (cud *CDNUIDetector) detectjsDelivr(content string, domains []string, urls 
 func (cud *CDNUIDetector) DetectUILibraries(content string, visualAssets []models.FileInfo, packages []models.Package) []models.UILibrary {
 	var libraries []models.UILibrary
 	contentLower := strings.ToLower(content)
-	
-	// Lottie
+
 	if lib := cud.detectLottie(contentLower, visualAssets, packages); lib != nil {
 		libraries = append(libraries, *lib)
 	}
-	
-	// Rive
+
 	if lib := cud.detectRive(contentLower, visualAssets, packages); lib != nil {
 		libraries = append(libraries, *lib)
 	}
-	
-	// Flare
+
 	if lib := cud.detectFlare(contentLower, visualAssets, packages); lib != nil {
 		libraries = append(libraries, *lib)
 	}
-	
-	// Syncfusion
+
 	if lib := cud.detectSyncfusion(contentLower, packages); lib != nil {
 		libraries = append(libraries, *lib)
 	}
-	
-	// Charts
+
 	if lib := cud.detectCharts(contentLower, packages); lib != nil {
 		libraries = append(libraries, *lib)
 	}
-	
-	// Animations package
+
 	if lib := cud.detectAnimations(contentLower, packages); lib != nil {
 		libraries = append(libraries, *lib)
 	}
-	
-	// Shimmer
+
 	if lib := cud.detectShimmer(contentLower, packages); lib != nil {
 		libraries = append(libraries, *lib)
 	}
-	
+
 	return libraries
 }
 
@@ -333,14 +312,14 @@ func (cud *CDNUIDetector) detectLottie(content string, visualAssets []models.Fil
 	lottieFiles := []string{}
 	for _, asset := range visualAssets {
 		if strings.HasSuffix(strings.ToLower(asset.Name), ".json") {
-			// Check if it's in a lottie-related directory or has animation in path
+
 			pathLower := strings.ToLower(asset.Path)
 			if strings.Contains(pathLower, "lottie") || strings.Contains(pathLower, "animation") {
 				lottieFiles = append(lottieFiles, asset.Name)
 			}
 		}
 	}
-	
+
 	var version string
 	for _, pkg := range packages {
 		if pkg.Name == "lottie" {
@@ -348,7 +327,7 @@ func (cud *CDNUIDetector) detectLottie(content string, visualAssets []models.Fil
 			break
 		}
 	}
-	
+
 	if len(lottieFiles) > 0 || strings.Contains(content, "lottie") || version != "" {
 		return &models.UILibrary{
 			Name:           "Lottie",
@@ -368,7 +347,7 @@ func (cud *CDNUIDetector) detectRive(content string, visualAssets []models.FileI
 			riveFiles = append(riveFiles, asset.Name)
 		}
 	}
-	
+
 	var version string
 	for _, pkg := range packages {
 		if pkg.Name == "rive" {
@@ -376,7 +355,7 @@ func (cud *CDNUIDetector) detectRive(content string, visualAssets []models.FileI
 			break
 		}
 	}
-	
+
 	if len(riveFiles) > 0 || strings.Contains(content, "rive") || version != "" {
 		return &models.UILibrary{
 			Name:           "Rive",
@@ -395,7 +374,7 @@ func (cud *CDNUIDetector) detectFlare(content string, visualAssets []models.File
 			flareFiles = append(flareFiles, asset.Name)
 		}
 	}
-	
+
 	var version string
 	for _, pkg := range packages {
 		if pkg.Name == "flare_flutter" {
@@ -403,7 +382,7 @@ func (cud *CDNUIDetector) detectFlare(content string, visualAssets []models.File
 			break
 		}
 	}
-	
+
 	if len(flareFiles) > 0 || strings.Contains(content, "flare") || version != "" {
 		return &models.UILibrary{
 			Name:           "Flare",
@@ -423,7 +402,7 @@ func (cud *CDNUIDetector) detectSyncfusion(content string, packages []models.Pac
 			break
 		}
 	}
-	
+
 	if strings.Contains(content, "syncfusion") || version != "" {
 		return &models.UILibrary{
 			Name:           "Syncfusion",
@@ -437,7 +416,7 @@ func (cud *CDNUIDetector) detectSyncfusion(content string, packages []models.Pac
 func (cud *CDNUIDetector) detectCharts(content string, packages []models.Package) *models.UILibrary {
 	var version string
 	chartPackages := []string{"fl_chart", "charts_flutter", "syncfusion_flutter_charts"}
-	
+
 	for _, pkg := range packages {
 		for _, chartPkg := range chartPackages {
 			if pkg.Name == chartPkg {
@@ -449,7 +428,7 @@ func (cud *CDNUIDetector) detectCharts(content string, packages []models.Package
 			break
 		}
 	}
-	
+
 	if strings.Contains(content, "chart") || version != "" {
 		return &models.UILibrary{
 			Name:           "Charts Library",
@@ -468,7 +447,7 @@ func (cud *CDNUIDetector) detectAnimations(content string, packages []models.Pac
 			break
 		}
 	}
-	
+
 	if version != "" {
 		return &models.UILibrary{
 			Name:           "Flutter Animations",
@@ -487,7 +466,7 @@ func (cud *CDNUIDetector) detectShimmer(content string, packages []models.Packag
 			break
 		}
 	}
-	
+
 	if strings.Contains(content, "shimmer") || version != "" {
 		return &models.UILibrary{
 			Name:           "Shimmer",
@@ -497,8 +476,6 @@ func (cud *CDNUIDetector) detectShimmer(content string, packages []models.Packag
 	}
 	return nil
 }
-
-// Helper functions
 
 func filterDomainsByPatterns(domains []string, patterns []string) []string {
 	var matched []string

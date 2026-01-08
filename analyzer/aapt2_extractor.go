@@ -38,25 +38,21 @@ func (a *AAPT2Extractor) ExtractMetadata(ctx context.Context, apkPath string) (*
 
 	metadata := &models.AAPT2Metadata{}
 
-	// Extract badging information (comprehensive metadata)
 	badgingData, err := a.ExtractBadging(ctx, apkPath)
 	if err == nil {
 		metadata.Badging = badgingData
 	}
 
-	// Extract package name
 	packageName, err := a.ExtractPackageName(ctx, apkPath)
 	if err == nil {
 		metadata.PackageName = packageName
 	}
 
-	// Extract permissions
 	permissions, err := a.ExtractPermissions(ctx, apkPath)
 	if err == nil {
 		metadata.Permissions = permissions
 	}
 
-	// Extract strings
 	strings, err := a.ExtractStrings(ctx, apkPath)
 	if err == nil {
 		metadata.ExtractedStrings = strings
@@ -100,7 +96,6 @@ func (a *AAPT2Extractor) parseBadging(output string) *models.AAPT2BadgingInfo {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Parse package line
 		if strings.HasPrefix(line, "package:") {
 			badging.PackageName = extractQuotedValue(line, "name=")
 			badging.VersionCode = extractQuotedValue(line, "versionCode=")
@@ -111,22 +106,18 @@ func (a *AAPT2Extractor) parseBadging(output string) *models.AAPT2BadgingInfo {
 			badging.CompileSdkVersionCodename = extractQuotedValue(line, "compileSdkVersionCodename=")
 		}
 
-		// Parse sdkVersion line
 		if strings.HasPrefix(line, "sdkVersion:") {
 			badging.MinSdkVersion = strings.Trim(strings.TrimPrefix(line, "sdkVersion:"), "'\"")
 		}
 
-		// Parse targetSdkVersion line
 		if strings.HasPrefix(line, "targetSdkVersion:") {
 			badging.TargetSdkVersion = strings.Trim(strings.TrimPrefix(line, "targetSdkVersion:"), "'\"")
 		}
 
-		// Parse application label
 		if strings.HasPrefix(line, "application-label:") {
 			badging.ApplicationLabel = strings.Trim(strings.TrimPrefix(line, "application-label:"), "'\"")
 		}
 
-		// Parse application icon
 		if strings.HasPrefix(line, "application-icon-") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
@@ -139,12 +130,10 @@ func (a *AAPT2Extractor) parseBadging(output string) *models.AAPT2BadgingInfo {
 			}
 		}
 
-		// Parse launchable activity
 		if strings.HasPrefix(line, "launchable-activity:") {
 			badging.LaunchableActivity = extractQuotedValue(line, "name=")
 		}
 
-		// Parse uses-permission
 		if strings.HasPrefix(line, "uses-permission:") {
 			permission := extractQuotedValue(line, "name=")
 			if permission != "" {
@@ -152,7 +141,6 @@ func (a *AAPT2Extractor) parseBadging(output string) *models.AAPT2BadgingInfo {
 			}
 		}
 
-		// Parse uses-feature
 		if strings.HasPrefix(line, "uses-feature:") {
 			feature := extractQuotedValue(line, "name=")
 			if feature != "" {
@@ -160,7 +148,6 @@ func (a *AAPT2Extractor) parseBadging(output string) *models.AAPT2BadgingInfo {
 			}
 		}
 
-		// Parse native code architectures
 		if strings.HasPrefix(line, "native-code:") {
 			archStr := strings.TrimPrefix(line, "native-code:")
 			archStr = strings.Trim(archStr, "'\" ")
@@ -169,7 +156,6 @@ func (a *AAPT2Extractor) parseBadging(output string) *models.AAPT2BadgingInfo {
 			}
 		}
 
-		// Parse locales
 		if strings.HasPrefix(line, "locales:") {
 			localeStr := strings.TrimPrefix(line, "locales:")
 			localeStr = strings.Trim(localeStr, "'\" ")
@@ -178,7 +164,6 @@ func (a *AAPT2Extractor) parseBadging(output string) *models.AAPT2BadgingInfo {
 			}
 		}
 
-		// Parse densities
 		if strings.HasPrefix(line, "densities:") {
 			densityStr := strings.TrimPrefix(line, "densities:")
 			densityStr = strings.Trim(densityStr, "'\" ")
@@ -187,7 +172,6 @@ func (a *AAPT2Extractor) parseBadging(output string) *models.AAPT2BadgingInfo {
 			}
 		}
 
-		// Parse supports-screens
 		if strings.HasPrefix(line, "supports-screens:") {
 			screenStr := strings.TrimPrefix(line, "supports-screens:")
 			screenStr = strings.Trim(screenStr, "'\" ")
@@ -196,7 +180,6 @@ func (a *AAPT2Extractor) parseBadging(output string) *models.AAPT2BadgingInfo {
 			}
 		}
 
-		// Parse supports-any-density
 		if strings.HasPrefix(line, "supports-any-density:") {
 			denseStr := strings.TrimPrefix(line, "supports-any-density:")
 			denseStr = strings.Trim(denseStr, "'\" ")
@@ -245,7 +228,7 @@ func (a *AAPT2Extractor) ExtractPermissions(ctx context.Context, apkPath string)
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line != "" && !strings.HasPrefix(line, "package:") {
-			// Remove "permission: " prefix if present
+
 			line = strings.TrimPrefix(line, "permission: ")
 			permissions = append(permissions, line)
 		}
@@ -280,8 +263,6 @@ func (a *AAPT2Extractor) ExtractStrings(ctx context.Context, apkPath string) ([]
 			continue
 		}
 
-		// Parse string format: String #123: value
-		// or just raw string values
 		parts := strings.SplitN(line, ":", 2)
 		var value string
 		if len(parts) == 2 {
@@ -290,10 +271,8 @@ func (a *AAPT2Extractor) ExtractStrings(ctx context.Context, apkPath string) ([]
 			value = line
 		}
 
-		// Clean up the value
 		value = strings.Trim(value, "\"'")
-		
-		// Skip empty strings and duplicates
+
 		if value != "" && !seen[value] {
 			seen[value] = true
 			extractedStrings = append(extractedStrings, value)
@@ -305,21 +284,19 @@ func (a *AAPT2Extractor) ExtractStrings(ctx context.Context, apkPath string) ([]
 
 // extractQuotedValue extracts a value from a key='value' or key="value" pattern
 func extractQuotedValue(line, key string) string {
-	// Try single quotes first
+
 	pattern := regexp.MustCompile(key + `'([^']*)'`)
 	matches := pattern.FindStringSubmatch(line)
 	if len(matches) > 1 {
 		return matches[1]
 	}
 
-	// Try double quotes
 	pattern = regexp.MustCompile(key + `"([^"]*)"`)
 	matches = pattern.FindStringSubmatch(line)
 	if len(matches) > 1 {
 		return matches[1]
 	}
 
-	// Try without quotes (for numeric values)
 	pattern = regexp.MustCompile(key + `'?([^'\s]+)'?`)
 	matches = pattern.FindStringSubmatch(line)
 	if len(matches) > 1 {

@@ -24,20 +24,20 @@ func (d *JadxDecompiler) Name() string {
 }
 
 func (d *JadxDecompiler) Priority() int {
-	return 50 // Try after direct ZIP extraction
+	return 50
 }
 
 func (d *JadxDecompiler) CanHandle(apkPath string) (bool, error) {
-	// Check if JADX is available
+
 	if _, err := exec.LookPath("jadx"); err != nil {
 		return false, fmt.Errorf("jadx not found: %w", err)
 	}
-	// JADX can handle any APK
+
 	return true, nil
 }
 
 func (d *JadxDecompiler) Decompile(ctx context.Context, apkPath, outputDir string) error {
-	// Check if JADX exists
+
 	if _, err := exec.LookPath("jadx"); err != nil {
 		return fmt.Errorf("jadx not found: %w", err)
 	}
@@ -45,20 +45,13 @@ func (d *JadxDecompiler) Decompile(ctx context.Context, apkPath, outputDir strin
 	const maxRetries = 2
 	baseTimeout := 30 * time.Minute
 
-	// Retry loop with exponential backoff
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		// Increase timeout for each retry
+
 		timeout := baseTimeout + (time.Duration(attempt-1) * 10 * time.Minute)
 		log.Printf("JADX decompilation attempt %d/%d (timeout: %v) for %s", attempt, maxRetries, timeout, apkPath)
 
 		cmdCtx, cancel := context.WithTimeout(ctx, timeout)
 
-		// Run JADX with optimized flags for low-resource environments
-		// -j 1: Use single thread to reduce CPU load
-		// --no-res: Skip resource decoding (saves time and memory)
-		// --no-imports: Skip unused imports to speed up processing
-		// --deobf-use-sourcename: Faster deobfuscation
-		// --deobf-min: Minimal deobfuscation for speed
 		cmd := exec.CommandContext(cmdCtx, "jadx",
 			"-d", outputDir,
 			"-j", "1",
@@ -68,7 +61,6 @@ func (d *JadxDecompiler) Decompile(ctx context.Context, apkPath, outputDir strin
 			"--deobf-min",
 			apkPath)
 
-		// Capture stderr for monitoring
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
 			cancel()
@@ -90,7 +82,6 @@ func (d *JadxDecompiler) Decompile(ctx context.Context, apkPath, outputDir strin
 			return fmt.Errorf("failed to start jadx: %w", err)
 		}
 
-		// Read stderr for progress/error monitoring
 		go func() {
 			scanner := bufio.NewScanner(stderr)
 			for scanner.Scan() {

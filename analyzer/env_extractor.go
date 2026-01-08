@@ -29,17 +29,17 @@ func NewEnvExtractor() *EnvExtractor {
 			".env.sample",
 		},
 		sensitiveKeys: map[string]bool{
-			"password":     true,
-			"secret":       true,
-			"key":          true,
-			"token":        true,
-			"api_key":      true,
-			"apikey":       true,
-			"private_key":  true,
-			"private":      true,
-			"credentials":  true,
-			"auth":         true,
-			"access_token": true,
+			"password":      true,
+			"secret":        true,
+			"key":           true,
+			"token":         true,
+			"api_key":       true,
+			"apikey":        true,
+			"private_key":   true,
+			"private":       true,
+			"credentials":   true,
+			"auth":          true,
+			"access_token":  true,
 			"client_secret": true,
 		},
 	}
@@ -48,13 +48,12 @@ func NewEnvExtractor() *EnvExtractor {
 // ExtractEnvFiles finds and extracts .env files from decompiled directory
 func (ee *EnvExtractor) ExtractEnvFiles(decompDir string) []models.EnvFileData {
 	var envData []models.EnvFileData
-	
+
 	filepath.Walk(decompDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}
-		
-		// Check if file matches any env pattern
+
 		filename := strings.ToLower(info.Name())
 		isEnvFile := false
 		for _, pattern := range ee.envFilePatterns {
@@ -63,12 +62,11 @@ func (ee *EnvExtractor) ExtractEnvFiles(decompDir string) []models.EnvFileData {
 				break
 			}
 		}
-		
+
 		if !isEnvFile {
 			return nil
 		}
-		
-		// Extract variables from env file
+
 		variables := ee.extractVariables(path)
 		if len(variables) > 0 {
 			envData = append(envData, models.EnvFileData{
@@ -76,10 +74,10 @@ func (ee *EnvExtractor) ExtractEnvFiles(decompDir string) []models.EnvFileData {
 				Variables: variables,
 			})
 		}
-		
+
 		return nil
 	})
-	
+
 	return envData
 }
 
@@ -90,60 +88,56 @@ func (ee *EnvExtractor) extractVariables(filePath string) []models.EnvVariable {
 		return nil
 	}
 	defer file.Close()
-	
+
 	var variables []models.EnvVariable
 	scanner := bufio.NewScanner(file)
 	lineRegex := regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$`)
-	
+
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
-		// Skip empty lines and comments
+
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		
+
 		matches := lineRegex.FindStringSubmatch(line)
 		if len(matches) >= 3 {
 			key := matches[1]
 			value := matches[2]
-			
-			// Remove quotes if present
+
 			value = strings.Trim(value, `"'`)
-			
-			// Determine if sensitive
+
 			isSensitive := ee.isSensitiveKey(key)
-			
+
 			variable := models.EnvVariable{
 				Key:      key,
 				Value:    value,
 				IsMasked: isSensitive,
 				FilePath: filePath,
 			}
-			
-			// Mask sensitive values
+
 			if isSensitive && len(value) > 8 {
 				variable.Value = value[:4] + "***" + value[len(value)-2:]
 			} else if isSensitive {
 				variable.Value = "***"
 			}
-			
+
 			variables = append(variables, variable)
 		}
 	}
-	
+
 	return variables
 }
 
 // isSensitiveKey checks if a key name suggests sensitive data
 func (ee *EnvExtractor) isSensitiveKey(key string) bool {
 	keyLower := strings.ToLower(key)
-	
+
 	for sensitivePattern := range ee.sensitiveKeys {
 		if strings.Contains(keyLower, sensitivePattern) {
 			return true
 		}
 	}
-	
+
 	return false
 }

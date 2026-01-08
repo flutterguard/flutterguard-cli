@@ -1,4 +1,4 @@
- package models
+package models
 
 import (
 	"bytes"
@@ -533,17 +533,13 @@ func (r Results) Value() (driver.Value, error) {
 		return nil, nil
 	}
 
-	// Marshal to JSON
 	jsonBytes, err := json.Marshal(r)
 	if err != nil {
 		return nil, err
 	}
 
-	// Remove null bytes that PostgreSQL cannot handle
-	// Replace \u0000 with empty string
 	sanitized := bytes.ReplaceAll(jsonBytes, []byte("\x00"), []byte(""))
 
-	// Also clean up any escaped null bytes in strings
 	sanitizedStr := strings.ReplaceAll(string(sanitized), "\\u0000", "")
 
 	return sanitizedStr, nil
@@ -587,8 +583,6 @@ type SendFeedbackRequest struct {
 type GetRemediationRequest struct {
 	FindingType string `json:"finding_type" binding:"required"`
 }
-
-// ============ PRICING & TEAM MODELS ============
 
 // PlanLimits defines the limits for a subscription plan
 type PlanLimits struct {

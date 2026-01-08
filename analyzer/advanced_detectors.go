@@ -25,19 +25,16 @@ func (a *Analyzer) detectNetworkSecurity(decompDir string) *models.NetworkSecuri
 
 	contentStr := strings.ToLower(string(content))
 
-	// Check for cleartext traffic
 	if strings.Contains(contentStr, "cleartexttrafficpermitted=\"true\"") {
 		config.CleartextAllowed = true
 		config.Risks = append(config.Risks, "Cleartext (HTTP) traffic is permitted - data can be intercepted")
 	}
 
-	// Check for certificate pinning
 	if strings.Contains(contentStr, "<pin-set>") || strings.Contains(contentStr, "<pin ") {
 		config.CertificatePinning = true
 		config.SecurityFeatures = append(config.SecurityFeatures, "Certificate pinning enabled")
 	}
 
-	// Check for trust anchors
 	if strings.Contains(contentStr, "<trust-anchors>") {
 		if strings.Contains(contentStr, "user") {
 			config.TrustsUserCerts = true
@@ -48,7 +45,6 @@ func (a *Analyzer) detectNetworkSecurity(decompDir string) *models.NetworkSecuri
 		}
 	}
 
-	// Extract domain configs
 	domainRegex := regexp.MustCompile(`<domain[^>]*>([^<]+)</domain>`)
 	for _, match := range domainRegex.FindAllStringSubmatch(string(content), -1) {
 		if len(match) > 1 {
@@ -98,13 +94,11 @@ func (a *Analyzer) detectDataStorage(contentStr string) *models.DataStorageAnaly
 		}
 	}
 
-	// Check for database encryption
 	if strings.Contains(contentStr, "SQLCipher") || strings.Contains(contentStr, "encrypted") {
 		analysis.DatabaseEncryption = true
 		analysis.SecurityNotes = append(analysis.SecurityNotes, "Database encryption detected")
 	}
 
-	// Check for backup flags
 	if strings.Contains(contentStr, "allowBackup=\"true\"") {
 		analysis.BackupAllowed = true
 		analysis.SecurityNotes = append(analysis.SecurityNotes, "App data backup is allowed - sensitive data may be extracted")
@@ -151,7 +145,6 @@ func (a *Analyzer) detectWebViewSecurity(contentStr string) *models.WebViewSecur
 		}
 	}
 
-	// Check for secure settings
 	secureSettings := []string{
 		"setAllowFileAccess(false)",
 		"setJavaScriptEnabled(false)",
@@ -171,14 +164,12 @@ func (a *Analyzer) detectWebViewSecurity(contentStr string) *models.WebViewSecur
 func (a *Analyzer) detectObfuscation(contentStr string, decompDir string) *models.ObfuscationAnalysis {
 	analysis := &models.ObfuscationAnalysis{}
 
-	// Check for ProGuard/R8 mapping
 	mappingPath := filepath.Join(decompDir, "mapping.txt")
 	if _, err := os.Stat(mappingPath); err == nil {
 		analysis.ProGuardDetected = true
 		analysis.MappingFileFound = true
 	}
 
-	// Heuristics for obfuscation
 	shortNamePattern := regexp.MustCompile(`\b[a-z]\.[a-z]\.[a-z]\b`)
 	shortNames := shortNamePattern.FindAllString(contentStr, -1)
 	if len(shortNames) > 100 {
@@ -187,7 +178,6 @@ func (a *Analyzer) detectObfuscation(contentStr string, decompDir string) *model
 		analysis.Indicators = append(analysis.Indicators, fmt.Sprintf("Found %d short class names (a.b.c pattern)", len(shortNames)))
 	}
 
-	// Check for string encryption
 	stringEncPatterns := []string{
 		"decrypt",
 		"deobfuscate",
@@ -203,7 +193,6 @@ func (a *Analyzer) detectObfuscation(contentStr string, decompDir string) *model
 		}
 	}
 
-	// Check for native library obfuscation
 	if strings.Contains(contentStr, "UPX") {
 		analysis.NativeObfuscation = true
 		analysis.Indicators = append(analysis.Indicators, "UPX packer detected in native libraries")
@@ -217,7 +206,7 @@ func (a *Analyzer) detectDeepLinks(decompDir string) *models.DeepLinkAnalysis {
 	manifestPath := filepath.Join(decompDir, "AndroidManifest.xml")
 	content, err := os.ReadFile(manifestPath)
 	if err != nil {
-		// Try alternate location
+
 		manifestPath = filepath.Join(decompDir, "resources", "AndroidManifest.xml")
 		content, err = os.ReadFile(manifestPath)
 		if err != nil {
@@ -228,7 +217,6 @@ func (a *Analyzer) detectDeepLinks(decompDir string) *models.DeepLinkAnalysis {
 	analysis := &models.DeepLinkAnalysis{}
 	contentStr := string(content)
 
-	// Extract intent filters with data schemes
 	schemeRegex := regexp.MustCompile(`android:scheme="([^"]+)"`)
 	hostRegex := regexp.MustCompile(`android:host="([^"]+)"`)
 	pathRegex := regexp.MustCompile(`android:path(?:Pattern|Prefix)?="([^"]+)"`)
@@ -255,11 +243,10 @@ func (a *Analyzer) detectDeepLinks(decompDir string) *models.DeepLinkAnalysis {
 		}
 	}
 
-	// Build example deep links
 	if len(analysis.Schemes) > 0 && len(analysis.Hosts) > 0 {
 		for i, scheme := range analysis.Schemes {
 			if i >= 3 {
-				break // Limit examples
+				break
 			}
 			for j, host := range analysis.Hosts {
 				if j >= 2 {
@@ -276,7 +263,6 @@ func (a *Analyzer) detectDeepLinks(decompDir string) *models.DeepLinkAnalysis {
 		}
 	}
 
-	// Check for App Links verification
 	if strings.Contains(contentStr, "autoVerify=\"true\"") {
 		analysis.AppLinksVerified = true
 		analysis.SecurityNotes = append(analysis.SecurityNotes, "App Links auto-verification enabled")
@@ -296,46 +282,38 @@ func (a *Analyzer) detectThirdPartySDKs(packages []models.Package, contentStr st
 	}
 
 	sdkDatabase := map[string]models.SDKInfo{
-		// Analytics
+
 		"firebase_analytics": {Name: "Firebase Analytics", Category: "Analytics", Vendor: "Google", PrivacyImpact: "High", DataCollected: []string{"Device info", "Usage patterns", "Crash data"}},
 		"google_analytics":   {Name: "Google Analytics", Category: "Analytics", Vendor: "Google", PrivacyImpact: "High", DataCollected: []string{"User behavior", "Demographics", "Events"}},
 		"mixpanel":           {Name: "Mixpanel", Category: "Analytics", Vendor: "Mixpanel", PrivacyImpact: "High", DataCollected: []string{"User events", "User properties", "Behavioral data"}},
 		"amplitude":          {Name: "Amplitude", Category: "Analytics", Vendor: "Amplitude", PrivacyImpact: "High", DataCollected: []string{"Event tracking", "User segmentation"}},
 
-		// Advertising
 		"google_mobile_ads":         {Name: "Google Mobile Ads (AdMob)", Category: "Advertising", Vendor: "Google", PrivacyImpact: "High", DataCollected: []string{"Advertising ID", "Location", "Device info"}},
 		"facebook_audience_network": {Name: "Facebook Audience Network", Category: "Advertising", Vendor: "Meta", PrivacyImpact: "High", DataCollected: []string{"User profile", "Device ID", "Location"}},
 		"unity_ads":                 {Name: "Unity Ads", Category: "Advertising", Vendor: "Unity", PrivacyImpact: "Medium", DataCollected: []string{"Device info", "Ad interactions"}},
 
-		// Crash Reporting
 		"sentry":               {Name: "Sentry", Category: "Crash Reporting", Vendor: "Sentry", PrivacyImpact: "Medium", DataCollected: []string{"Crash logs", "Stack traces", "Device state"}},
 		"firebase_crashlytics": {Name: "Firebase Crashlytics", Category: "Crash Reporting", Vendor: "Google", PrivacyImpact: "Medium", DataCollected: []string{"Crash data", "Device info"}},
 		"bugsnag":              {Name: "Bugsnag", Category: "Crash Reporting", Vendor: "Bugsnag", PrivacyImpact: "Medium", DataCollected: []string{"Error logs", "User context"}},
 
-		// Authentication
 		"firebase_auth":         {Name: "Firebase Authentication", Category: "Authentication", Vendor: "Google", PrivacyImpact: "High", DataCollected: []string{"Email", "Phone", "Auth tokens"}},
 		"google_sign_in":        {Name: "Google Sign-In", Category: "Authentication", Vendor: "Google", PrivacyImpact: "High", DataCollected: []string{"Google profile", "Email"}},
 		"flutter_facebook_auth": {Name: "Facebook Login", Category: "Authentication", Vendor: "Meta", PrivacyImpact: "High", DataCollected: []string{"Facebook profile", "Email", "Friends list"}},
 
-		// Payment
 		"stripe":   {Name: "Stripe", Category: "Payment", Vendor: "Stripe", PrivacyImpact: "High", DataCollected: []string{"Payment info", "Billing address", "Transaction history"}, RequiresCompliance: []string{"PCI-DSS"}},
 		"razorpay": {Name: "Razorpay", Category: "Payment", Vendor: "Razorpay", PrivacyImpact: "High", DataCollected: []string{"Payment details", "Contact info"}},
 		"paypal":   {Name: "PayPal", Category: "Payment", Vendor: "PayPal", PrivacyImpact: "High", DataCollected: []string{"Payment info", "Transaction data"}},
 
-		// Social
 		"share_plus":           {Name: "Share Plus", Category: "Social", Vendor: "Community", PrivacyImpact: "Low", DataCollected: []string{"Shared content"}},
 		"flutter_facebook_sdk": {Name: "Facebook SDK", Category: "Social", Vendor: "Meta", PrivacyImpact: "High", DataCollected: []string{"User interactions", "Device info"}},
 
-		// Location
 		"geolocator":          {Name: "Geolocator", Category: "Location", Vendor: "Community", PrivacyImpact: "High", DataCollected: []string{"GPS coordinates", "Location history"}},
 		"google_maps_flutter": {Name: "Google Maps", Category: "Maps", Vendor: "Google", PrivacyImpact: "High", DataCollected: []string{"Location", "Search queries", "Navigation history"}},
 
-		// Storage/Database
 		"sqflite":         {Name: "SQFlite", Category: "Storage", Vendor: "Community", PrivacyImpact: "Low", DataCollected: []string{"Local data only"}},
 		"hive":            {Name: "Hive", Category: "Storage", Vendor: "Community", PrivacyImpact: "Low", DataCollected: []string{"Local data only"}},
 		"cloud_firestore": {Name: "Cloud Firestore", Category: "Database", Vendor: "Google", PrivacyImpact: "High", DataCollected: []string{"User data", "Database queries"}},
 
-		// Push Notifications
 		"firebase_messaging": {Name: "Firebase Cloud Messaging", Category: "Push Notifications", Vendor: "Google", PrivacyImpact: "Medium", DataCollected: []string{"Device tokens", "Message data"}},
 		"onesignal":          {Name: "OneSignal", Category: "Push Notifications", Vendor: "OneSignal", PrivacyImpact: "Medium", DataCollected: []string{"Device info", "Notification preferences"}},
 	}
@@ -356,7 +334,6 @@ func (a *Analyzer) detectThirdPartySDKs(packages []models.Package, contentStr st
 		}
 	}
 
-	// Calculate privacy score (0-100, lower is better for privacy)
 	if analysis.TotalSDKs > 0 {
 		analysis.PrivacyScore = analysis.HighPrivacyImpactCount * 20
 		if analysis.PrivacyScore > 100 {

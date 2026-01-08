@@ -22,12 +22,11 @@ func (d *ApkDirectZipDecompiler) Name() string {
 }
 
 func (d *ApkDirectZipDecompiler) Priority() int {
-	return 100 // Try this first (fastest)
+	return 100
 }
 
 func (d *ApkDirectZipDecompiler) CanHandle(apkPath string) (bool, error) {
-	// This can handle any valid APK since APKs are just ZIP files
-	// But it's most effective for Flutter apps
+
 	isFlutter, err := IsFlutterAPK(apkPath)
 	if err != nil {
 		return false, err
@@ -43,7 +42,7 @@ func (d *ApkDirectZipDecompiler) Decompile(ctx context.Context, apkPath, outputD
 	defer r.Close()
 
 	for _, f := range r.File {
-		// Check context cancellation
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

@@ -17,112 +17,91 @@ func NewAdvancedServiceDetector() *AdvancedServiceDetector {
 func (asd *AdvancedServiceDetector) DetectAllServices(content string, domains []string) []models.ServiceUsage {
 	var services []models.ServiceUsage
 	contentLower := strings.ToLower(content)
-	
-	// AWS Detection
+
 	if service := asd.detectAWS(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Google Cloud Platform
+
 	if service := asd.detectGCP(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Microsoft Azure
+
 	if service := asd.detectAzure(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Heroku
+
 	if service := asd.detectHeroku(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// DigitalOcean
+
 	if service := asd.detectDigitalOcean(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// MongoDB Atlas
+
 	if service := asd.detectMongoDBAtlas(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// SendGrid
+
 	if service := asd.detectSendGrid(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Twilio
+
 	if service := asd.detectTwilio(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Algolia
+
 	if service := asd.detectAlgolia(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Contentful
+
 	if service := asd.detectContentful(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Cloudflare
+
 	if service := asd.detectCloudflare(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Stripe (already exists but enhance it)
+
 	if service := asd.detectStripe(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// PayPal
+
 	if service := asd.detectPayPal(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Razorpay
+
 	if service := asd.detectRazorpay(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// RevenueCat
+
 	if service := asd.detectRevenueCat(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// OneSignal
+
 	if service := asd.detectOneSignal(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Sentry
+
 	if service := asd.detectSentry(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Amplitude
+
 	if service := asd.detectAmplitude(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Mixpanel
+
 	if service := asd.detectMixpanel(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// AppsFlyer
+
 	if service := asd.detectAppsFlyer(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
-	// Branch.io
+
 	if service := asd.detectBranch(contentLower, domains); service != nil {
 		services = append(services, *service)
 	}
-	
+
 	return services
 }
 
@@ -132,7 +111,7 @@ func (asd *AdvancedServiceDetector) detectAWS(content string, domains []string) 
 		"aws_", "amazon_cognito", "aws-sdk",
 		"dynamodb", "cognito", "lambda.aws", "elasticache",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -150,7 +129,7 @@ func (asd *AdvancedServiceDetector) detectGCP(content string, domains []string) 
 		"google-cloud", "cloud.google", "gcloud",
 		"google_cloud", "gcr.io",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -168,7 +147,7 @@ func (asd *AdvancedServiceDetector) detectAzure(content string, domains []string
 		"azure-api", "servicebus.windows", "microsoft.azure",
 		"azure_", "azuread",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -185,7 +164,7 @@ func (asd *AdvancedServiceDetector) detectHeroku(content string, domains []strin
 		"heroku.com", "herokuapp.com", "herokucdn.com",
 		"heroku_", "heroku-",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -202,7 +181,7 @@ func (asd *AdvancedServiceDetector) detectDigitalOcean(content string, domains [
 		"digitalocean.com", "digitaloceanspaces.com",
 		"digitalocean_", "do_spaces",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -219,7 +198,7 @@ func (asd *AdvancedServiceDetector) detectMongoDBAtlas(content string, domains [
 		"mongodb.net", "mongodb.com", "mongo_dart",
 		"mongodb_", "mongodbatlas", "atlas.mongodb",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -236,7 +215,7 @@ func (asd *AdvancedServiceDetector) detectSendGrid(content string, domains []str
 		"sendgrid.com", "sendgrid.net", "sendgrid_",
 		"sendgrid-api",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -253,7 +232,7 @@ func (asd *AdvancedServiceDetector) detectTwilio(content string, domains []strin
 		"twilio.com", "twilio_", "twilio-",
 		"twiliocdn.com",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -270,7 +249,7 @@ func (asd *AdvancedServiceDetector) detectAlgolia(content string, domains []stri
 		"algolia.net", "algolia.com", "algoliacdn.com",
 		"algolia_", "algoliasearch",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -286,7 +265,7 @@ func (asd *AdvancedServiceDetector) detectContentful(content string, domains []s
 	indicators := []string{
 		"contentful.com", "ctfassets.net", "contentful_",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -303,7 +282,7 @@ func (asd *AdvancedServiceDetector) detectCloudflare(content string, domains []s
 		"cloudflare.com", "cloudflaressl.com", "cf-",
 		"cloudflare_", "cloudflare-",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -320,7 +299,7 @@ func (asd *AdvancedServiceDetector) detectStripe(content string, domains []strin
 		"stripe.com", "stripe.network", "stripe_",
 		"stripejs", "pk_live", "pk_test",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -337,7 +316,7 @@ func (asd *AdvancedServiceDetector) detectPayPal(content string, domains []strin
 		"paypal.com", "paypalobjects.com", "paypal_",
 		"braintree", "paypal-sdk",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -353,7 +332,7 @@ func (asd *AdvancedServiceDetector) detectRazorpay(content string, domains []str
 	indicators := []string{
 		"razorpay.com", "razorpay_", "rzp_",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -369,7 +348,7 @@ func (asd *AdvancedServiceDetector) detectRevenueCat(content string, domains []s
 	indicators := []string{
 		"revenuecat.com", "revenuecat_", "purchases_flutter",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -385,7 +364,7 @@ func (asd *AdvancedServiceDetector) detectOneSignal(content string, domains []st
 	indicators := []string{
 		"onesignal.com", "onesignal_", "onesignal-",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -402,7 +381,7 @@ func (asd *AdvancedServiceDetector) detectSentry(content string, domains []strin
 		"sentry.io", "sentry_", "sentry-",
 		"sentry_flutter",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -418,7 +397,7 @@ func (asd *AdvancedServiceDetector) detectAmplitude(content string, domains []st
 	indicators := []string{
 		"amplitude.com", "amplitude_", "amplitude-",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -434,7 +413,7 @@ func (asd *AdvancedServiceDetector) detectMixpanel(content string, domains []str
 	indicators := []string{
 		"mixpanel.com", "mixpanel_", "mxpnl",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -450,7 +429,7 @@ func (asd *AdvancedServiceDetector) detectAppsFlyer(content string, domains []st
 	indicators := []string{
 		"appsflyer.com", "appsflyer_", "onelink.me",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -467,7 +446,7 @@ func (asd *AdvancedServiceDetector) detectBranch(content string, domains []strin
 		"branch.io", "branch_", "app.link",
 		"bnc.lt",
 	}
-	
+
 	detectedDomains := filterDomainsByIndicators(domains, indicators)
 	if len(detectedDomains) > 0 || containsAnyString(content, indicators) {
 		return &models.ServiceUsage{
@@ -478,8 +457,6 @@ func (asd *AdvancedServiceDetector) detectBranch(content string, domains []strin
 	}
 	return nil
 }
-
-// Helper functions
 
 func filterDomainsByIndicators(domains []string, indicators []string) []string {
 	var matched []string

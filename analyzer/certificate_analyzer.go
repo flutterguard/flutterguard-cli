@@ -33,7 +33,6 @@ func (c *CertificateAnalyzer) AnalyzeCertificates(ctx context.Context, decompDir
 		return nil, fmt.Errorf("openssl command not available")
 	}
 
-	// Recursively find META-INF directory
 	metaInfPath := findMetaINFDirectory(decompDir)
 	if metaInfPath == "" {
 		return nil, fmt.Errorf("META-INF directory not found")
@@ -43,7 +42,6 @@ func (c *CertificateAnalyzer) AnalyzeCertificates(ctx context.Context, decompDir
 		Certificates: []models.Certificate{},
 	}
 
-	// Find all certificate files containing "CERT" in their name (case-insensitive)
 	entries, err := os.ReadDir(metaInfPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read META-INF directory: %w", err)
@@ -60,18 +58,16 @@ func (c *CertificateAnalyzer) AnalyzeCertificates(ctx context.Context, decompDir
 		return nil, fmt.Errorf("no certificate files found in META-INF")
 	}
 
-	// Analyze each certificate file
 	for _, certFile := range certFiles {
 		cert, err := c.analyzeCertificateFile(ctx, certFile)
 		if err != nil {
-			// Log error but continue with other certificates
+
 			certInfo.Errors = append(certInfo.Errors, fmt.Sprintf("Failed to analyze %s: %v", filepath.Base(certFile), err))
 			continue
 		}
 		certInfo.Certificates = append(certInfo.Certificates, *cert)
 	}
 
-	// Generate security notes
 	certInfo.SecurityNotes = c.generateSecurityNotes(certInfo.Certificates)
 
 	return certInfo, nil
@@ -89,13 +85,12 @@ func (c *CertificateAnalyzer) analyzeCertificateFile(ctx context.Context, certFi
 	}
 
 	output := stdout.String()
-	
+
 	cert := &models.Certificate{
-		FileName: filepath.Base(certFile),
+		FileName:  filepath.Base(certFile),
 		RawOutput: output,
 	}
 
-	// Parse certificate details
 	c.parseCertificateDetails(cert, output)
 
 	return cert, nil
@@ -104,11 +99,10 @@ func (c *CertificateAnalyzer) analyzeCertificateFile(ctx context.Context, certFi
 // parseCertificateDetails parses openssl output to extract certificate information
 func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, output string) {
 	lines := strings.Split(output, "\n")
-	
+
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Extract subject
 		if strings.HasPrefix(line, "subject=") || strings.Contains(line, "Subject:") {
 			if strings.HasPrefix(line, "subject=") {
 				cert.Subject = strings.TrimPrefix(line, "subject=")
@@ -117,7 +111,6 @@ func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, 
 			}
 		}
 
-		// Extract issuer
 		if strings.HasPrefix(line, "issuer=") || strings.Contains(line, "Issuer:") {
 			if strings.HasPrefix(line, "issuer=") {
 				cert.Issuer = strings.TrimPrefix(line, "issuer=")
@@ -126,7 +119,6 @@ func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, 
 			}
 		}
 
-		// Extract validity dates
 		if strings.Contains(line, "Not Before") || strings.Contains(line, "notBefore") {
 			dateStr := extractDate(line)
 			if dateStr != "" {
@@ -140,7 +132,6 @@ func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, 
 			}
 		}
 
-		// Extract serial number
 		if strings.Contains(line, "Serial Number") || strings.Contains(line, "serial") {
 			serialRe := regexp.MustCompile(`([0-9a-fA-F:]+)`)
 			if match := serialRe.FindString(line); match != "" {
@@ -148,7 +139,6 @@ func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, 
 			}
 		}
 
-		// Extract signature algorithm
 		if strings.Contains(line, "Signature Algorithm") {
 			parts := strings.Split(line, ":")
 			if len(parts) > 1 {
@@ -156,7 +146,6 @@ func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, 
 			}
 		}
 
-		// Extract public key algorithm and size
 		if strings.Contains(line, "Public Key Algorithm") || strings.Contains(line, "Public-Key:") {
 			if strings.Contains(line, "rsaEncryption") {
 				cert.PublicKeyAlgorithm = "RSA"
@@ -174,7 +163,6 @@ func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, 
 		}
 	}
 
-	// Extract CN (Common Name) from subject
 	if cert.Subject != "" {
 		cnRe := regexp.MustCompile(`CN\s*=\s*([^,]+)`)
 		if match := cnRe.FindStringSubmatch(cert.Subject); len(match) > 1 {
@@ -182,7 +170,6 @@ func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, 
 		}
 	}
 
-	// Extract Organization from subject
 	if cert.Subject != "" {
 		orgRe := regexp.MustCompile(`O\s*=\s*([^,]+)`)
 		if match := orgRe.FindStringSubmatch(cert.Subject); len(match) > 1 {
@@ -190,10 +177,8 @@ func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, 
 		}
 	}
 
-	// Check if self-signed
 	cert.IsSelfSigned = cert.Subject == cert.Issuer
 
-	// Check if expired
 	if cert.ValidTo != "" {
 		cert.IsExpired = c.isCertificateExpired(cert.ValidTo)
 	}
@@ -201,13 +186,12 @@ func (c *CertificateAnalyzer) parseCertificateDetails(cert *models.Certificate, 
 
 // extractDate extracts date string from certificate output
 func extractDate(line string) string {
-	// Try to find date patterns like "Jan 1 00:00:00 2024 GMT"
+
 	dateRe := regexp.MustCompile(`([A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4}\s+\w+)`)
 	if match := dateRe.FindString(line); match != "" {
 		return match
 	}
-	
-	// Try ISO format
+
 	isoRe := regexp.MustCompile(`\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}`)
 	if match := isoRe.FindString(line); match != "" {
 		return match
@@ -218,7 +202,7 @@ func extractDate(line string) string {
 
 // isCertificateExpired checks if a certificate is expired
 func (c *CertificateAnalyzer) isCertificateExpired(validTo string) bool {
-	// Try parsing common date formats
+
 	formats := []string{
 		"Jan 2 15:04:05 2006 MST",
 		"2006-01-02 15:04:05",
@@ -239,28 +223,24 @@ func (c *CertificateAnalyzer) generateSecurityNotes(certs []models.Certificate) 
 	var notes []string
 
 	for _, cert := range certs {
-		// Check for self-signed certificates
+
 		if cert.IsSelfSigned {
 			notes = append(notes, fmt.Sprintf("⚠️ Certificate '%s' is self-signed. This is common for debug builds but should not be used in production.", cert.CommonName))
 		}
 
-		// Check for expired certificates
 		if cert.IsExpired {
 			notes = append(notes, fmt.Sprintf("🔴 Certificate '%s' has expired (valid until %s). This APK may not install on newer Android versions.", cert.CommonName, cert.ValidTo))
 		}
 
-		// Check for weak signature algorithms
 		if strings.Contains(strings.ToLower(cert.SignatureAlgorithm), "md5") ||
 			strings.Contains(strings.ToLower(cert.SignatureAlgorithm), "sha1") {
 			notes = append(notes, fmt.Sprintf("⚠️ Certificate '%s' uses weak signature algorithm '%s'. Consider upgrading to SHA-256 or higher.", cert.CommonName, cert.SignatureAlgorithm))
 		}
 
-		// Check for weak key sizes
 		if cert.PublicKeyAlgorithm == "RSA" && strings.Contains(cert.PublicKeySize, "1024") {
 			notes = append(notes, fmt.Sprintf("⚠️ Certificate '%s' uses weak RSA key size (1024 bit). Modern security standards recommend at least 2048 bits.", cert.CommonName))
 		}
 
-		// Check validity period
 		if cert.ValidFrom != "" && cert.ValidTo != "" {
 			validity := c.calculateValidityYears(cert.ValidFrom, cert.ValidTo)
 			if validity > 25 {
@@ -268,14 +248,12 @@ func (c *CertificateAnalyzer) generateSecurityNotes(certs []models.Certificate) 
 			}
 		}
 
-		// Check for generic/default names
 		if strings.Contains(strings.ToLower(cert.CommonName), "android debug") ||
 			strings.Contains(strings.ToLower(cert.CommonName), "unknown") {
 			notes = append(notes, fmt.Sprintf("🔧 Certificate '%s' appears to be a debug certificate. This app should not be distributed publicly.", cert.CommonName))
 		}
 	}
 
-	// Overall assessment
 	if len(certs) == 0 {
 		notes = append(notes, "❌ No certificates found. The APK signature may be corrupted.")
 	} else if len(certs) == 1 {
@@ -330,10 +308,9 @@ func findMetaINFDirectory(rootDir string) string {
 			return nil
 		}
 
-		// Check if this is a META-INF directory
 		if info.IsDir() && strings.EqualFold(filepath.Base(path), "META-INF") {
 			foundPath = path
-			return filepath.SkipDir // Stop searching after finding first match
+			return filepath.SkipDir
 		}
 
 		return nil

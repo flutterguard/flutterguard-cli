@@ -28,7 +28,6 @@ func NewDecompiler(cfg *Config) *Decompiler {
 		NewJadxDecompiler(cfg),
 	}
 
-	// Sort by priority (highest first)
 	sort.Slice(strategies, func(i, j int) bool {
 		return strategies[i].Priority() > strategies[j].Priority()
 	})
@@ -128,7 +127,7 @@ func (d *Decompiler) FindLibAppSO(decompDir string) (string, error) {
 		}
 		if !info.IsDir() && info.Name() == "libapp.so" {
 			libappPath = path
-			return io.EOF // Stop walking
+			return io.EOF
 		}
 		return nil
 	})
@@ -146,23 +145,20 @@ func (d *Decompiler) FindLibAppSO(decompDir string) (string, error) {
 
 // ValidateAPK checks if a file is a valid APK
 func ValidateAPK(filePath string) error {
-	// Check extension
+
 	if !strings.HasSuffix(strings.ToLower(filePath), ".apk") {
 		return fmt.Errorf("file is not an APK")
 	}
 
-	// Check if file exists
 	info, err := os.Stat(filePath)
 	if err != nil {
 		return fmt.Errorf("file does not exist: %w", err)
 	}
 
-	// Check if it's a regular file
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("not a regular file")
 	}
 
-	// Check if file is not empty
 	if info.Size() == 0 {
 		return fmt.Errorf("APK file is empty")
 	}
@@ -210,7 +206,7 @@ func (d *Decompiler) ExtractManifestPermissions(decompDir string) []models.Permi
 
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
-		// Try alternate location
+
 		manifestPath = filepath.Join(decompDir, "AndroidManifest.xml")
 		data, err = os.ReadFile(manifestPath)
 		if err != nil {
@@ -227,7 +223,7 @@ func (d *Decompiler) ExtractManifestPermissions(decompDir string) []models.Permi
 
 	var manifest Manifest
 	if err := xml.Unmarshal(data, &manifest); err != nil {
-		// Fallback: regex extraction
+
 		return d.extractPermissionsRegex(string(data))
 	}
 
@@ -273,12 +269,10 @@ func (d *Decompiler) extractPermissionsRegex(content string) []models.Permission
 func (d *Decompiler) ExtractAppMetadata(decompDir, apkPath string, libappContent string) models.AppMetadata {
 	metadata := models.AppMetadata{}
 
-	// Get APK size
 	if info, err := os.Stat(apkPath); err == nil {
 		metadata.APKSize = info.Size()
 	}
 
-	// Extract from AndroidManifest.xml
 	manifestPath := filepath.Join(decompDir, "resources", "AndroidManifest.xml")
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -289,35 +283,30 @@ func (d *Decompiler) ExtractAppMetadata(decompDir, apkPath string, libappContent
 	if len(data) > 0 {
 		content := string(data)
 
-		// Package name
 		if re := regexp.MustCompile(`package="([^"]+)"`); re.MatchString(content) {
 			if match := re.FindStringSubmatch(content); len(match) > 1 {
 				metadata.PackageName = match[1]
 			}
 		}
 
-		// Version name
 		if re := regexp.MustCompile(`android:versionName="([^"]+)"`); re.MatchString(content) {
 			if match := re.FindStringSubmatch(content); len(match) > 1 {
 				metadata.VersionName = match[1]
 			}
 		}
 
-		// Version code
 		if re := regexp.MustCompile(`android:versionCode="([^"]+)"`); re.MatchString(content) {
 			if match := re.FindStringSubmatch(content); len(match) > 1 {
 				metadata.VersionCode = match[1]
 			}
 		}
 
-		// Min SDK
 		if re := regexp.MustCompile(`android:minSdkVersion="([^"]+)"`); re.MatchString(content) {
 			if match := re.FindStringSubmatch(content); len(match) > 1 {
 				metadata.MinSDKVersion = match[1]
 			}
 		}
 
-		// Target SDK
 		if re := regexp.MustCompile(`android:targetSdkVersion="([^"]+)"`); re.MatchString(content) {
 			if match := re.FindStringSubmatch(content); len(match) > 1 {
 				metadata.TargetSDK = match[1]
@@ -325,7 +314,6 @@ func (d *Decompiler) ExtractAppMetadata(decompDir, apkPath string, libappContent
 		}
 	}
 
-	// Extract Flutter/Dart versions from libapp content
 	if flutterRe := regexp.MustCompile(`Flutter\s+([0-9]+\.[0-9]+\.[0-9]+)`); flutterRe.MatchString(libappContent) {
 		if match := flutterRe.FindStringSubmatch(libappContent); len(match) > 1 {
 			metadata.FlutterVersion = match[1]
@@ -338,41 +326,33 @@ func (d *Decompiler) ExtractAppMetadata(decompDir, apkPath string, libappContent
 		}
 	}
 
-	// Build timestamp heuristic from APK modification time
 	if info, err := os.Stat(apkPath); err == nil {
 		metadata.BuildTimestamp = info.ModTime().Format("2006-01-02 15:04:05 MST")
 	}
 
-	// APK signing scheme detection (heuristic based on META-INF files)
 	metadata.SigningScheme = d.detectSigningScheme(decompDir)
 
-	// Debug vs Release detection
 	metadata.IsDebugBuild = d.IsDebuggable(decompDir) || strings.Contains(strings.ToLower(apkPath), "debug")
 
-	// Supported ABIs
 	metadata.SupportedABIs = d.detectABIs(decompDir)
 
-	// Flutter engine hash
 	if engineRe := regexp.MustCompile(`engine\s+([a-f0-9]{7,40})`); engineRe.MatchString(libappContent) {
 		if match := engineRe.FindStringSubmatch(libappContent); len(match) > 1 {
 			metadata.FlutterEngineHash = match[1]
 		}
 	}
 
-	// Impeller enablement (Flutter's new rendering engine)
 	metadata.ImpellerEnabled = strings.Contains(libappContent, "impeller") || strings.Contains(libappContent, "Impeller")
 
-	// Extract sample texts (first 50 unique strings)
 	metadata.ExtractedTexts = d.extractTexts(libappContent)
 
-	// Detect monetization SDKs
 	metadata.MonetizationSDKs = d.detectMonetizationSDKs(libappContent)
 
 	return metadata
 }
 
 func (d *Decompiler) detectSigningScheme(decompDir string) string {
-	// Recursively find META-INF directory
+
 	metaInfPath := findMetaINFDirectory(decompDir)
 	if metaInfPath == "" {
 		return "unknown"
@@ -380,14 +360,12 @@ func (d *Decompiler) detectSigningScheme(decompDir string) string {
 
 	schemes := []string{}
 
-	// v1 signature (JAR signing)
 	if files, err := filepath.Glob(filepath.Join(metaInfPath, "*.RSA")); err == nil && len(files) > 0 {
 		schemes = append(schemes, "v1")
 	} else if files, err := filepath.Glob(filepath.Join(metaInfPath, "*.DSA")); err == nil && len(files) > 0 {
 		schemes = append(schemes, "v1")
 	}
 
-	// v2/v3 signature blocks
 	if _, err := os.Stat(filepath.Join(metaInfPath, "CERT.SF")); err == nil {
 		schemes = append(schemes, "v2+")
 	}
@@ -419,15 +397,13 @@ func (d *Decompiler) detectABIs(decompDir string) []string {
 }
 
 func (d *Decompiler) extractTexts(content string) []string {
-	// Extract meaningful strings: phrases with spaces or domain-like strings
-	// Avoid random variable names, hex values, and boilerplate code
+
 	re := regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9\s.,;:!?'"()-]{6,100}`)
 	matches := re.FindAllString(content, -1)
 
 	seen := make(map[string]bool)
 	var texts []string
 
-	// Common boilerplate patterns to skip
 	boilerplatePatterns := []string{
 		"package ", "import ", "class ", "public ", "private ", "protected ",
 		"static ", "final ", "void ", "return ", "new ", "super",
@@ -444,17 +420,14 @@ func (d *Decompiler) extractTexts(content string) []string {
 			continue
 		}
 
-		// Skip if too short after trimming
 		if len(cleaned) < 5 {
 			continue
 		}
 
-		// Skip if it's just repeated characters
 		if d.isRepeatedChars(cleaned) {
 			continue
 		}
 
-		// Skip boilerplate patterns
 		isBoilerplate := false
 		cleanedLower := strings.ToLower(cleaned)
 		for _, pattern := range boilerplatePatterns {
@@ -467,13 +440,10 @@ func (d *Decompiler) extractTexts(content string) []string {
 			continue
 		}
 
-		// Prefer strings with spaces (actual phrases/sentences)
-		// Accept standalone meaningful words only if they're longer
 		if !strings.Contains(cleaned, " ") && len(cleaned) < 10 {
 			continue
 		}
 
-		// Skip if mostly hex or digits
 		digitCount := 0
 		for _, c := range cleaned {
 			if (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') {
@@ -531,7 +501,6 @@ func (d *Decompiler) detectMonetizationSDKs(content string) []string {
 		}
 	}
 
-	// Deduplicate
 	seen := make(map[string]bool)
 	var unique []string
 	for _, s := range detected {
@@ -664,7 +633,7 @@ func (d *Decompiler) FindFirebaseConfig(decompDir string) *models.FirebaseInfo {
 			info.APIKeyMasked = k
 		}
 	}
-	// Common Firebase endpoints
+
 	info.Endpoints = []string{"firebaseio.com", "firebasestorage.googleapis.com"}
 	return info
 }

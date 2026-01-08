@@ -9,12 +9,10 @@ import (
 func formatTextReport(results *models.Results) string {
 	var report string
 
-	// Header with style
 	report += "\n╔════════════════════════════════════════════╗\n"
 	report += "║    🔍 FlutterGuard Analysis Report         ║\n"
 	report += "╚════════════════════════════════════════════╝\n\n"
 
-	// App Information
 	if results.AppInfo.PackageName != "" {
 		report += "📱 App Information\n"
 		report += "─────────────────────────────────────────────\n"
@@ -24,7 +22,6 @@ func formatTextReport(results *models.Results) string {
 		report += "\n"
 	}
 
-	// Certificate Info
 	if results.CertificateInfo != nil && len(results.CertificateInfo.Certificates) > 0 {
 		report += "📜 Certificate Information\n"
 		report += "─────────────────────────────────────────────\n"
@@ -43,7 +40,6 @@ func formatTextReport(results *models.Results) string {
 		report += "\n"
 	}
 
-	// Emails
 	if len(results.Emails) > 0 {
 		report += fmt.Sprintf("📧 Emails (%d found)\n", len(results.Emails))
 		report += "─────────────────────────────────────────────\n"
@@ -58,7 +54,6 @@ func formatTextReport(results *models.Results) string {
 		report += "\n"
 	}
 
-	// Domains
 	if len(results.Domains) > 0 {
 		report += fmt.Sprintf("🌐 Domains (%d found)\n", len(results.Domains))
 		report += "─────────────────────────────────────────────\n"
@@ -73,7 +68,6 @@ func formatTextReport(results *models.Results) string {
 		report += "\n"
 	}
 
-	// API Endpoints
 	if len(results.APIEndpoints) > 0 {
 		report += fmt.Sprintf("🔌 API Endpoints (%d found)\n", len(results.APIEndpoints))
 		report += "─────────────────────────────────────────────\n"
@@ -88,7 +82,6 @@ func formatTextReport(results *models.Results) string {
 		report += "\n"
 	}
 
-	// Hardcoded Keys
 	if len(results.HardcodedKeys) > 0 {
 		report += fmt.Sprintf("🔑 Secrets Found (%d)\n", len(results.HardcodedKeys))
 		report += "─────────────────────────────────────────────\n"
@@ -103,7 +96,6 @@ func formatTextReport(results *models.Results) string {
 		report += "\n"
 	}
 
-	// Firebase
 	if results.Firebase != nil {
 		report += "🔥 Firebase Configuration\n"
 		report += "─────────────────────────────────────────────\n"
@@ -115,7 +107,6 @@ func formatTextReport(results *models.Results) string {
 		report += "\n"
 	}
 
-	// Services
 	if len(results.Services) > 0 {
 		report += fmt.Sprintf("🔗 Third-Party Services (%d)\n", len(results.Services))
 		report += "─────────────────────────────────────────────\n"
@@ -134,7 +125,6 @@ func formatTextReport(results *models.Results) string {
 		report += "\n"
 	}
 
-	// Permissions
 	if len(results.Permissions) > 0 {
 		dangerousCount := 0
 		for _, perm := range results.Permissions {
@@ -148,7 +138,6 @@ func formatTextReport(results *models.Results) string {
 		report += "\n"
 	}
 
-	// Packages
 	if len(results.Packages) > 0 {
 		report += fmt.Sprintf("📚 Packages (%d)\n", len(results.Packages))
 		report += "─────────────────────────────────────────────\n"
@@ -177,4 +166,3 @@ func parseSDK(sdkStr string) int {
 	fmt.Sscanf(sdkStr, "%d", &sdk)
 	return sdk
 }
-

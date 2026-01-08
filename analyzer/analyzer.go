@@ -51,22 +51,17 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 		URLs: models.URLCollection{},
 	}
 
-	// Create temporary decompilation directory
 	decompDir := apkPath + "-decompiled"
-	// Don't defer remove - we need to keep it for zipping
-	// defer os.RemoveAll(decompDir)
 
-	// Step 1: Try multiple decompilation strategies
 	emitProgress(progress, 10, "init", "starting analysis")
 
-	// Step 1a: Extract AAPT2 metadata (if available)
 	if a.aapt2.IsAvailable() {
 		emitProgress(progress, 12, "aapt2", "extract metadata")
 		aapt2Data, err := a.aapt2.ExtractMetadata(ctx, apkPath)
 		if err == nil {
 			results.AAPT2Metadata = aapt2Data
 		} else {
-			// Log but don't fail - aapt2 is optional
+
 			fmt.Printf("Warning: AAPT2 extraction failed: %v\n", err)
 		}
 	}
@@ -80,11 +75,9 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 
 	emitProgress(progress, 20, "decompile", "completed")
 
-	// Step 2: Check for libapp.so (Flutter app)
 	libappPath, libappErr := a.decompiler.FindLibAppSO(decompDir)
 	isFlutterApp := libappErr == nil && libappPath != ""
 
-	// Store which decompiler was used and attempt details
 	results.DecompilerUsed = decompResult.Strategy
 	results.DecompilationAttempts = decompResult.Attempts
 
@@ -92,7 +85,6 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 	var libappContent []byte
 
 	if isFlutterApp {
-		// Step 2a: Analyze Flutter app (from libapp.so)
 		var err error
 		libappContent, err = os.ReadFile(libappPath)
 		if err != nil {
@@ -100,7 +92,6 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 		}
 		contentStr = string(libappContent)
 	} else {
-		// Step 2b: Analyze non-Flutter app (from Java/XML source)
 		var err error
 		contentStr, err = a.decompiler.ReadDecompiledSources(decompDir)
 		if err != nil {
@@ -110,7 +101,6 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 
 	emitProgress(progress, 30, "extract", "scan strings")
 
-	// Extract from libapp.so with validation
 	rawEmails := a.extractor.ExtractEmails(contentStr)
 	for _, email := range rawEmails {
 		if a.emailValidator.ValidateEmail(email) {
@@ -120,7 +110,6 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 
 	emitProgress(progress, 35, "extract", "urls/emails")
 
-	// Extract and validate URLs
 	rawURLs := a.extractor.ExtractURLs(contentStr)
 	urls := make(map[string][]string)
 
@@ -145,7 +134,6 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 
 	emitProgress(progress, 40, "extract", "domains/endpoints")
 
-	// Extract and validate domains
 	rawDomains := a.extractor.ExtractDomains(contentStr)
 	for _, domain := range rawDomains {
 		if valid, _ := a.domainValidator.ValidateDomain(domain); valid {
@@ -153,13 +141,11 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 		}
 	}
 
-	// Extract IP addresses (no validation needed - regex is sufficient)
 	results.IPAddresses = a.extractor.ExtractIPAddresses(contentStr)
 
-	// Extract endpoints with domains and validate full URLs
 	rawAPIEndpoints := a.extractor.ExtractEndpointsWithDomain(contentStr, urls)
 	for _, endpoint := range rawAPIEndpoints {
-		// Validate the full URL
+
 		if a.endpointValidator.ValidateFullEndpointURL(endpoint.URL) {
 			results.APIEndpoints = append(results.APIEndpoints, endpoint)
 		}
@@ -167,27 +153,22 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 
 	results.EndpointsNoDomain = a.extractor.ExtractEndpointsNoDomain(contentStr)
 
-	// Potential endpoints (full and route-only)
 	results.PotentialEndpointsFull = uniqueStrings(append(results.URLs.HTTP, results.URLs.HTTPS...))
 	results.PotentialEndpointsRoutes = uniqueStrings(results.EndpointsNoDomain)
 
-	// Extract HTTP requests and headers
 	results.HTTPRequests = a.extractor.ExtractHTTPRequests(contentStr)
 	results.RequestHeaders = a.extractor.ExtractRequestHeaders(contentStr)
 
-	// Extract MethodChannels
 	results.MethodChannels = a.extractor.ExtractMethodChannels(contentStr)
 
 	emitProgress(progress, 45, "extract", "contacts/imports")
 
 	results.PhoneNumbers = a.extractor.ExtractPhoneNumbers(contentStr)
 
-	// Extract imports
 	results.Imports = a.extractor.ExtractImports(contentStr)
 
 	emitProgress(progress, 50, "packages", "detect packages")
 
-	// Extract package information
 	results.AppPackageName = a.extractor.ExtractAppPackageName(contentStr)
 	packageNames := a.extractor.ExtractPackages(contentStr, results.AppPackageName)
 
@@ -207,7 +188,6 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 			URL:  fmt.Sprintf("https://pub.dev/packages/%s", pkg),
 		}
 
-		// Add enrichment data if available
 		if enrichment, ok := enrichedData[pkg]; ok && enrichment != nil {
 			packageInfo.GrantedPoints = enrichment.GrantedPoints
 			packageInfo.MaxPoints = enrichment.MaxPoints
@@ -222,7 +202,6 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 
 	emitProgress(progress, 60, "manifest", "permissions & debug flags")
 
-	// Extract permissions from AndroidManifest
 	results.Permissions = a.decompiler.ExtractManifestPermissions(decompDir)
 	if len(results.Permissions) == 0 && results.AAPT2Metadata != nil {
 		var permStrings []string
@@ -244,13 +223,12 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 			})
 		}
 	}
-	// Debug flags
+
 	results.DebugInfo = &models.DebugInfo{ManifestDebuggable: a.decompiler.IsDebuggable(decompDir)}
 	if results.DebugInfo.ManifestDebuggable {
 		results.DebugInfo.Indicators = append(results.DebugInfo.Indicators, "AndroidManifest debuggable=true")
 	}
 
-	// Firebase config
 	if fb := a.decompiler.FindFirebaseConfig(decompDir); fb != nil {
 		results.Firebase = fb
 	}
@@ -258,11 +236,9 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 	// Service usage heuristic (Firebase, Supabase, Stripe)
 	var services []models.ServiceUsage
 
-	// Use advanced service detector
 	detectedServices := a.advancedServiceDetector.DetectAllServices(contentStr, results.Domains)
 	services = append(services, detectedServices...)
 
-	// Firebase via domains/permissions/config (expanded detection)
 	firebaseDomains := []string{
 		"firebaseio.com",
 		"firebasestorage.googleapis.com",
@@ -277,7 +253,7 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 			Packages:   filterPackages(results.Packages, []string{"firebase_", "cloud_firestore"}),
 			Indicators: []string{"Firebase SDK detected"},
 		}
-		// Only add if not already detected by advanced detector
+
 		alreadyDetected := false
 		for _, svc := range services {
 			if svc.Name == "Firebase" {
@@ -289,7 +265,7 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 			services = append(services, fbService)
 		}
 	}
-	// Supabase via domains and env keys
+
 	if containsAny(results.Domains, []string{"supabase.co"}) || containsAny(results.Imports, []string{"supabase_flutter", "postgrest"}) {
 		services = append(services, models.ServiceUsage{
 			Name:       "Supabase",
@@ -298,7 +274,7 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 			Indicators: []string{"Supabase domain or packages present"},
 		})
 	}
-	// Stripe via keys and domains
+
 	stripeKeys := a.extractor.DetectServiceKeys(contentStr)
 	if len(stripeKeys) > 0 || containsAny(results.Domains, []string{"stripe.com", "api.stripe.com"}) {
 		services = append(services, models.ServiceUsage{
@@ -311,7 +287,6 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 	}
 	results.Services = services
 
-	// Extract app metadata
 	results.AppInfo = a.decompiler.ExtractAppMetadata(decompDir, apkPath, contentStr)
 
 	emitProgress(progress, 65, "services", "service detection")
@@ -319,20 +294,16 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 	results.SQLCommands = a.extractor.ExtractSQLCommands(contentStr)
 	results.SQLiteDatabases = a.extractor.ExtractSQLiteDatabases(contentStr)
 
-	// Additional heuristics
 	results.HardcodedKeys = uniqueStrings(a.detectHardcodedKeys(contentStr))
 	results.InstallSourceHints = uniqueStrings(a.detectInstallSources(contentStr))
 	results.EnvironmentHints = uniqueStrings(a.detectEnvironmentHints(contentStr))
 
 	results.CDNs = a.cdnUIDetector.DetectCDNs(contentStr, results.Domains, results.URLs)
 
-	// Legacy CDN detection (for backward compatibility)
 	results.CDNUsage = uniqueStrings(a.detectCDNs(contentStr, urls))
 
-	// Step 3: Scan for asset files (70-100%)
 	emitProgress(progress, 70, "assets", "scan env/config/content")
 
-	// Extract ENV files and their contents
 	results.EnvData = a.envExtractor.ExtractEnvFiles(decompDir)
 	results.EnvFiles = a.scanForFiles(decompDir, []string{".env"}, true)
 	emitProgress(progress, 75, "assets", ".env files")
@@ -349,26 +320,21 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 
 	emitProgress(progress, 95, "assets", "visual assets")
 
-	// Find and set app icon from visual assets
 	appIcon := a.findAppIcon(results.VisualAssets)
 	if appIcon != "" {
 		results.AppInfo.AppIconPath = appIcon
 	}
 
-	// Asset size breakdown - include all file types
 	allFiles := append([]models.FileInfo{}, results.VisualAssets...)
 	allFiles = append(allFiles, results.ConfigFiles...)
 	allFiles = append(allFiles, results.EnvFiles...)
 	allFiles = append(allFiles, results.ContentFiles...)
 	results.AssetSizes = a.computeAssetSizes(allFiles)
 
-	// File type breakdown across the entire decompiled tree
 	results.FileTypes = a.analyzeFileTypes(decompDir)
 
-	// UI Components detection (using advanced detector)
 	results.UILibraries = a.cdnUIDetector.DetectUILibraries(contentStr, results.VisualAssets, results.Packages)
 
-	// Legacy UI Components detection (for backward compatibility)
 	uiInfo := a.extractor.DetectUIComponents(contentStr, results.VisualAssets)
 	if libs, ok := uiInfo["ui_libraries"].([]string); ok {
 		results.UIComponents = &models.UIComponentInfo{}
@@ -381,16 +347,14 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 		}
 	}
 
-	// SDK Bloat Analysis (top packages by estimated size)
 	results.SDKBloat = a.analyzeSDAKBloat(results.Packages, results.AppInfo.APKSize)
 
-	// Create and add decompiled folder as downloadable asset
 	decompZipPath, err := a.createDecompZip(decompDir)
 	if err == nil && decompZipPath != "" {
 		decompInfo, _ := os.Stat(decompZipPath)
 		if decompInfo != nil {
 			results.DecompiledFolderPath = decompZipPath
-			// Add to content files for download
+
 			results.ContentFiles = append(results.ContentFiles, models.FileInfo{
 				Name: "decompiled_sources.zip",
 				Path: decompZipPath,
@@ -399,24 +363,21 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 		}
 	}
 
-	// Fingerprints
 	results.Fingerprints = &models.BinaryFingerprints{
 		APKSHA256:    fileSHA256(apkPath),
 		LibappSHA256: sha256String(libappContent),
 	}
 
-	// Certificate Analysis
 	if a.certAnalyzer.IsAvailable() {
 		certInfo, err := a.certAnalyzer.AnalyzeCertificates(ctx, decompDir)
 		if err == nil {
 			results.CertificateInfo = certInfo
 		} else {
-			// Log but don't fail the analysis
+
 			fmt.Printf("Warning: Certificate analysis failed: %v\n", err)
 		}
 	}
 
-	// Advanced security analysis
 	results.NetworkSecurity = a.detectNetworkSecurity(decompDir)
 	results.DataStorage = a.detectDataStorage(contentStr)
 	results.WebViewSecurity = a.detectWebViewSecurity(contentStr)
@@ -424,26 +385,13 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 	results.DeepLinks = a.detectDeepLinks(decompDir)
 	results.SDKAnalysis = a.detectThirdPartySDKs(results.Packages, contentStr)
 
-	// Generate summary
 	results.Summary = a.generateSummary(results)
 	emitProgress(progress, 100, "done", "analysis complete")
 
-	// Store decompDir path so worker can clean it up after copying files
 	results.DecompiledDirPath = decompDir
-
-	// Note: DO NOT delete decompDir here - worker pool will handle cleanup after copying files
 
 	return results, nil
 }
-
-
-
-// SaveResults saves all extracted files to the report directory
-
-// helpers
-
-
-// analyzeFileTypes walks the full decompiled tree and aggregates by extension
 
 func containsAny(list []string, needles []string) bool {
 	for _, s := range list {
@@ -496,9 +444,9 @@ func maskKeys(keys []string) []string {
 
 // analyzeSDAKBloat estimates SDK size impact (heuristic: larger known SDKs)
 func (a *Analyzer) analyzeSDAKBloat(packages []models.Package, totalAPKSize int64) []models.SDKImpact {
-	// Known large SDKs with estimated typical sizes in MB
+
 	knownSizes := map[string]float64{
-		// Firebase SDKs
+
 		"firebase_core":          2.5,
 		"firebase_auth":          3.0,
 		"cloud_firestore":        4.5,
@@ -508,31 +456,31 @@ func (a *Analyzer) analyzeSDAKBloat(packages []models.Package, totalAPKSize int6
 		"firebase_remote_config": 1.5,
 		"firebase_crashlytics":   2.0,
 		"firebase_performance":   1.2,
-		// Google SDKs
+
 		"google_maps_flutter": 5.0,
 		"google_mobile_ads":   2.5,
 		"google_sign_in":      1.8,
 		"google_fonts":        1.0,
 		"google_nav_bar":      0.8,
-		// Social & Auth
+
 		"facebook_login":            3.5,
 		"facebook_audience_network": 2.5,
 		"flutter_facebook_login":    2.0,
 		"sign_in_with_apple":        1.5,
-		// Monetization
+
 		"in_app_purchase":          2.0,
 		"revenue_cat":              1.5,
 		"in_app_purchase_storekit": 1.8,
-		// Error Tracking & Monitoring
+
 		"sentry_flutter":  2.0,
 		"sentry":          2.0,
 		"bugsnag_flutter": 1.5,
-		// Analytics & Attribution
+
 		"appsflyer":         1.5,
 		"adjust":            1.2,
 		"amplitude_flutter": 1.8,
 		"mixpanel_flutter":  1.5,
-		// Media & Camera
+
 		"video_player":           2.5,
 		"camera":                 2.0,
 		"image_picker":           1.5,
@@ -540,11 +488,11 @@ func (a *Analyzer) analyzeSDAKBloat(packages []models.Package, totalAPKSize int6
 		"video_trimmer":          2.0,
 		"image_cropper":          1.8,
 		"image_compress_flutter": 1.0,
-		// Notifications
+
 		"onesignal_flutter":           1.5,
 		"flutter_local_notifications": 1.0,
 		"awesome_notifications":       1.2,
-		// UI Libraries
+
 		"syncfusion_flutter":          8.0,
 		"syncfusion_flutter_datagrid": 3.0,
 		"syncfusion_flutter_charts":   2.5,
@@ -553,16 +501,16 @@ func (a *Analyzer) analyzeSDAKBloat(packages []models.Package, totalAPKSize int6
 		"syncfusion_flutter_sliders":  1.5,
 		"flutter_lottie":              1.2,
 		"lottie":                      1.2,
-		// Animations
+
 		"animation_presets":    0.8,
 		"animations":           0.8,
 		"staggered_animations": 0.6,
-		// Charts & Graphs
+
 		"fl_chart":       1.5,
 		"charts_flutter": 2.0,
 		"mpflutter":      1.8,
 		"graphic":        1.5,
-		// Database
+
 		"sqflite":           1.0,
 		"hive":              1.2,
 		"moor":              1.5,
@@ -570,28 +518,28 @@ func (a *Analyzer) analyzeSDAKBloat(packages []models.Package, totalAPKSize int6
 		"isar":              2.0,
 		"realm":             2.5,
 		"firebase_database": 2.0,
-		// Networking
+
 		"dio":             0.8,
 		"http":            0.5,
 		"graphql":         1.2,
 		"graphql_flutter": 1.2,
-		// State Management
+
 		"provider": 0.3,
 		"riverpod": 0.4,
 		"bloc":     0.5,
 		"get":      0.6,
 		"mobx":     0.7,
-		// Device Integration
+
 		"device_info_plus":   0.8,
 		"package_info_plus":  0.5,
 		"permission_handler": 1.2,
 		"location":           1.0,
 		"geolocator":         1.2,
-		// Cloud Services
+
 		"aws_sdk_flutter":   3.0,
 		"aws_api_gateway":   2.0,
 		"azure_sdk_flutter": 2.5,
-		// Other Popular SDKs
+
 		"twilio_flutter":   1.8,
 		"sendgrid_flutter": 1.0,
 		"stripe_flutter":   2.5,
@@ -626,7 +574,6 @@ func (a *Analyzer) analyzeSDAKBloat(packages []models.Package, totalAPKSize int6
 		}
 	}
 
-	// Calculate percentage of total APK
 	if totalAPKSize > 0 {
 		for i := range impacts {
 			impacts[i].PercentTotal = (impacts[i].SizeMB * 1024 * 1024 / float64(totalAPKSize)) * 100
@@ -647,17 +594,3 @@ func uniqueStringsLocal(in []string) []string {
 	}
 	return out
 }
-
-// createDecompZip creates a zip file of the decompiled folder
-
-// ReadDecompiledSources reads all Java/XML source files from the decompiled folder
-
-// findAppIcon locates the most likely launcher icon (prefers mipmap ic_launcher at highest density)
-
-// detectHardcodedKeys finds likely API/encryption keys in source content
-
-// detectInstallSources looks for Play Store/sideload hints
-
-// detectEnvironmentHints looks for prod/staging/dev switching
-
-// detectCDNs checks URLs and content for common CDN providers

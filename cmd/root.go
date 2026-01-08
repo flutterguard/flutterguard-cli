@@ -12,10 +12,10 @@ const Version = "0.9.3"
 
 // CLIConfig holds CLI options passed via flags
 type CLIConfig struct {
-	OutputFormat           string
-	OutputDir              string
-	Verbose                bool
-	EnableNetworkAndDNS    bool
+	OutputFormat        string
+	OutputDir           string
+	Verbose             bool
+	EnableNetworkAndDNS bool
 }
 
 var (
@@ -26,10 +26,10 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "flutterguard",
-	Short: "Local APK security analysis tool",
-	Long:  "FlutterGuard CLI analyzes Android APKs (especially Flutter apps) for security insights and metadata.",
+	Short: "FlutterGuard CLI - Analyze Flutter Android APKs for security insights",
+	Long:  "FlutterGuard CLI is a tool to analyze Flutter Android APKs for security issues, misconfigurations, and sensitive data exposure.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// If no arguments provided, show help instead of error
+
 		if len(os.Args) == 1 {
 			_ = cmd.Help()
 			os.Exit(0)
@@ -39,7 +39,6 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if showVersion {
 			fmt.Printf("FlutterGuard CLI v%s\n", Version)
-			fmt.Println("A local APK security analysis tool")
 			return nil
 		}
 
@@ -67,8 +66,6 @@ var rootCmd = &cobra.Command{
 			fmt.Println("Starting analysis...")
 		}
 
-		// Network checks disabled by default unless --enable-network-and-dns-checks is set
-
 		if err := runAnalysis(absPath, &cfg); err != nil {
 			return fmt.Errorf("analysis failed: %w", err)
 		}
@@ -84,7 +81,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	// Custom help template with ASCII art banner
+
 	rootCmd.SetHelpTemplate(`   ___ _       _   _             ___                     _ 
   / __\ |_   _| |_| |_ ___ _ __ / _ \/\ /\  __ _ _ __ __| |
  / _\ | | | | | __| __/ _ \ '__/ /_\/ / \ \/ _` + "`" + ` | '__/ _` + "`" + ` |
@@ -122,15 +119,14 @@ For more information, visit: https://github.com/flutterguard/flutterguard-cli
 
 // Execute runs the root Cobra command
 func Execute() {
-	// Flags
-	rootCmd.Flags().StringVar(&apkPath, "apk", "", "Path to APK file to analyze (required)")
+
+	rootCmd.Flags().StringVar(&apkPath, "apk", "", "Flutter app APK file to analyze")
 	rootCmd.Flags().StringVar(&cfg.OutputFormat, "format", "json", "Output format: json or text (used when --outDir not set)")
-	rootCmd.Flags().StringVar(&cfg.OutputDir, "outDir", "", "Output directory for structured results (creates folder with app name)")
+	rootCmd.Flags().StringVar(&cfg.OutputDir, "outDir", "", "Output directory for structured results (creates folder with app package name), if not set, outputs to stdout")
 	rootCmd.Flags().BoolVar(&cfg.Verbose, "verbose", false, "Enable verbose output")
-	rootCmd.Flags().BoolVar(&cfg.EnableNetworkAndDNS, "enable-network-and-dns-checks", false, "Enable DNS validation and network enrichment (default: offline)")
+	rootCmd.Flags().BoolVar(&cfg.EnableNetworkAndDNS, "enable-network-and-dns-checks", false, "Enable DNS validation and network enrichment for all domains, endpoints, packages... (default: offline)")
 	rootCmd.Flags().BoolVar(&showVersion, "version", false, "Show version information")
 
-	// Mark required flags
 	_ = rootCmd.MarkFlagRequired("apk")
 
 	if err := rootCmd.Execute(); err != nil {

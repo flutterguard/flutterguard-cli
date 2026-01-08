@@ -13,7 +13,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 
 	md.WriteString("# FlutterGuard Analysis Report\n\n")
 
-	// Table of Contents
 	md.WriteString("## 📋 Table of Contents\n\n")
 	md.WriteString("- [App Information](#app-information)\n")
 	if results.CertificateInfo != nil {
@@ -55,7 +54,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 	}
 	md.WriteString("\n---\n\n")
 
-	// App Information
 	md.WriteString("## 🎯 App Information\n\n")
 	if results.AppInfo.PackageName != "" {
 		md.WriteString(fmt.Sprintf("- **Package Name:** `%s`\n", results.AppInfo.PackageName))
@@ -65,7 +63,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 	}
 	md.WriteString("\n")
 
-	// Certificate Info
 	if results.CertificateInfo != nil {
 		md.WriteString("## 📜 Certificate Information\n\n")
 		if len(results.CertificateInfo.Certificates) > 0 {
@@ -91,7 +88,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// Emails
 	if len(results.Emails) > 0 {
 		md.WriteString(fmt.Sprintf("## 📧 Emails\n\n**Total Found:** %d → [View All](emails.txt)\n\n", len(results.Emails)))
 		md.WriteString("**Sample (first 10):**\n\n")
@@ -107,7 +103,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// Domains
 	if len(results.Domains) > 0 {
 		md.WriteString(fmt.Sprintf("## 🌐 Domains\n\n**Total Found:** %d → [View All](domains.txt)\n\n", len(results.Domains)))
 		md.WriteString("**Sample (first 10):**\n\n")
@@ -123,7 +118,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// URLs
 	if len(allURLs) > 0 {
 		md.WriteString(fmt.Sprintf("## 🔗 URLs\n\n**Total Found:** %d → [View All](urls.txt)\n\n", len(allURLs)))
 		md.WriteString(fmt.Sprintf("- HTTP: %d\n", len(results.URLs.HTTP)))
@@ -132,7 +126,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// API Endpoints
 	if len(results.APIEndpoints) > 0 {
 		md.WriteString(fmt.Sprintf("## 🛠 API Endpoints\n\n**Total Found:** %d → [View All](api_endpoints.txt)\n\n", len(results.APIEndpoints)))
 		md.WriteString("**Sample (first 10):**\n\n")
@@ -148,7 +141,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// Hardcoded Keys
 	if len(results.HardcodedKeys) > 0 {
 		md.WriteString(fmt.Sprintf("## 🔑 Hardcoded Keys\n\n**Total Found:** %d → [View All](hardcoded_keys.txt)\n\n", len(results.HardcodedKeys)))
 		md.WriteString("⚠️ **Security Risk:** Hardcoded secrets detected!\n\n")
@@ -165,7 +157,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// Firebase
 	if results.Firebase != nil {
 		md.WriteString("## 🔥 Firebase Configuration\n\n")
 		md.WriteString(fmt.Sprintf("- **Project ID:** `%s`\n", results.Firebase.ProjectID))
@@ -182,7 +173,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// Services
 	if len(results.Services) > 0 {
 		md.WriteString(fmt.Sprintf("## ⚙️ Third-Party Services\n\n**Total Detected:** %d → [View All](services.txt)\n\n", len(results.Services)))
 		for _, svc := range results.Services {
@@ -209,7 +199,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		}
 	}
 
-	// Permissions
 	if len(results.Permissions) > 0 {
 		md.WriteString(fmt.Sprintf("## 🔒 Permissions\n\n**Total:** %d → [View All](permissions.txt)\n\n", len(results.Permissions)))
 		dangerousCount := 0
@@ -237,7 +226,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// Packages
 	if len(results.Packages) > 0 {
 		md.WriteString(fmt.Sprintf("## 📦 Flutter Packages\n\n**Total:** %d → [View All](packages.txt)\n\n", len(results.Packages)))
 		md.WriteString("**Sample (first 10):**\n\n")
@@ -253,11 +241,9 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// Assets
 	if len(allAssets) > 0 {
 		md.WriteString(fmt.Sprintf("## 📁 Assets\n\n**Total Files:** %d → [View Folder](assets/)\n\n", len(allAssets)))
-		
-		// Group by extension for summary
+
 		extCounts := make(map[string]int)
 		for _, file := range allAssets {
 			ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(file.Name)), ".")
@@ -274,7 +260,6 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("\n")
 	}
 
-	// Decompiled APK
 	if results.DecompiledDirPath != "" {
 		md.WriteString("## 📦 Decompiled APK\n\n")
 		md.WriteString("The full decompiled APK contents are available in the [`decompiled/`](decompiled/) folder.\n\n")
@@ -287,12 +272,10 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("- META-INF signing information\n\n")
 	}
 
-	// Footer
 	md.WriteString("---\n\n")
 	md.WriteString("## 📊 Full Analysis\n\n")
 	md.WriteString("For complete detailed analysis data, see [analysis.json](analysis.json)\n\n")
 	md.WriteString("*Generated by FlutterGuard CLI*\n")
-
 
 	return md.String()
 }
