@@ -11,6 +11,10 @@ import (
 func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo) string {
 	var md strings.Builder
 
+	addGap := func() {
+		md.WriteString("\n\n")
+	}
+
 	md.WriteString("# FlutterGuard Analysis Report\n\n")
 
 	md.WriteString("## 📋 Table of Contents\n\n")
@@ -61,7 +65,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString(fmt.Sprintf("- **Min SDK:** %s\n", results.AppInfo.MinSDKVersion))
 		md.WriteString(fmt.Sprintf("- **Target SDK:** %s\n", results.AppInfo.TargetSDK))
 	}
-	md.WriteString("\n")
+	addGap()
 
 	if results.CertificateInfo != nil {
 		md.WriteString("## 📜 Certificate Information\n\n")
@@ -85,7 +89,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 				md.WriteString(fmt.Sprintf("- %s\n", n))
 			}
 		}
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if len(results.Emails) > 0 {
@@ -100,7 +104,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		if len(results.Emails) > 10 {
 			md.WriteString(fmt.Sprintf("\n*... and %d more in [emails.txt](emails.txt)*\n", len(results.Emails)-10))
 		}
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if len(results.Domains) > 0 {
@@ -115,7 +119,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		if len(results.Domains) > 10 {
 			md.WriteString(fmt.Sprintf("\n*... and %d more in [domains.txt](domains.txt)*\n", len(results.Domains)-10))
 		}
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if len(allURLs) > 0 {
@@ -123,7 +127,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString(fmt.Sprintf("- HTTP: %d\n", len(results.URLs.HTTP)))
 		md.WriteString(fmt.Sprintf("- HTTPS: %d\n", len(results.URLs.HTTPS)))
 		md.WriteString(fmt.Sprintf("- Other: %d\n", len(results.URLs.FTP)+len(results.URLs.WS)+len(results.URLs.WSS)+len(results.URLs.File)+len(results.URLs.Content)+len(results.URLs.Other)))
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if len(results.APIEndpoints) > 0 {
@@ -138,7 +142,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		if len(results.APIEndpoints) > 10 {
 			md.WriteString(fmt.Sprintf("\n*... and %d more in [api_endpoints.txt](api_endpoints.txt)*\n", len(results.APIEndpoints)-10))
 		}
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if len(results.HardcodedKeys) > 0 {
@@ -154,7 +158,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		if len(results.HardcodedKeys) > 5 {
 			md.WriteString(fmt.Sprintf("\n*... and %d more in [hardcoded_keys.txt](hardcoded_keys.txt)*\n", len(results.HardcodedKeys)-5))
 		}
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if results.Firebase != nil {
@@ -170,7 +174,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 				md.WriteString(fmt.Sprintf("- `%s`\n", e))
 			}
 		}
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if len(results.Services) > 0 {
@@ -195,7 +199,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 					md.WriteString(fmt.Sprintf("- `%s`\n", k))
 				}
 			}
-			md.WriteString("\n")
+			addGap()
 		}
 	}
 
@@ -223,7 +227,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 				md.WriteString(fmt.Sprintf("\n*... and %d more in [permissions.txt](permissions.txt)*\n", dangerousCount-10))
 			}
 		}
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if len(results.Packages) > 0 {
@@ -238,7 +242,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		if len(results.Packages) > 10 {
 			md.WriteString(fmt.Sprintf("\n*... and %d more in [packages.txt](packages.txt)*\n", len(results.Packages)-10))
 		}
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if len(allAssets) > 0 {
@@ -257,7 +261,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		for ext, count := range extCounts {
 			md.WriteString(fmt.Sprintf("- [`%s`](assets/%s/) - %d files\n", ext, ext, count))
 		}
-		md.WriteString("\n")
+		addGap()
 	}
 
 	if results.DecompiledDirPath != "" {
@@ -270,6 +274,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("- Native libraries (.so files)\n")
 		md.WriteString("- Assets and raw files\n")
 		md.WriteString("- META-INF signing information\n\n")
+		addGap()
 	}
 
 	md.WriteString("---\n\n")
