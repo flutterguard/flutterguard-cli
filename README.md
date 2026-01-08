@@ -187,18 +187,6 @@ By default, FlutterGuard runs completely offline. Enable network features for:
 flutterguard-cli --apk app.apk --outDir ./results --enable-network-and-dns-checks
 ```
 
-### Command Reference
-
-| Flag                              | Description                                         | Default  |
-| --------------------------------- | --------------------------------------------------- | -------- |
-| `--apk`                           | Flutter app APK file path to analyze **(required)** | —        |
-| `--outDir`                        | Directory to save structured results                | stdout   |
-| `--format`                        | Output format: `json` or `text`                     | `json`   |
-| `--verbose`                       | Show detailed progress during analysis              | disabled |
-| `--enable-network-and-dns-checks` | Enable online features                              | disabled |
-| `--version`                       | Show version information                            | —        |
-| `--help`                          | Show help message                                   | —        |
-
 ## Output Structure
 
 When using `--outDir`, FlutterGuard creates an organized directory structure:
@@ -233,28 +221,17 @@ results/
 
 **Tip:** Open `summary.md` in any markdown viewer—it includes a table of contents with links to all findings.
 
-## Project Structure
+## Why Go instead of Dart?
 
-```
-flutterguard-cli/
-├── main.go                     # Application entry point
-├── cmd/                        # CLI commands and output
-│   ├── root.go                # Command definitions and flags
-│   ├── analyze.go             # Analysis orchestration
-│   ├── output.go              # Structured directory output
-│   ├── output_text.go         # Text report formatting
-│   └── output_markdown.go     # Markdown report generation
-├── analyzer/                   # Core analysis logic
-│   ├── analyzer.go            # Main analysis pipeline
-│   ├── config.go              # Configuration structures
-│   ├── progress.go            # Progress reporting
-│   ├── decompiler.go          # Decompilation strategy
-│   ├── secrets_detector.go   # Secret pattern matching
-│   ├── assets_scanner.go     # Asset discovery
-│   └── ...                    # Other analysis modules
-└── models/
-    └── models.go              # Data structures
-```
+FlutterGuard is written in Go rather than Dart because:
+
+- **Single Compiled Binary**: Users get a standalone executable with zero dependencies—just download and run, no runtime required.
+- **Cross-Platform Distribution**: Go compiles easily to Windows, macOS, and Linux with a single codebase, making it simpler for users across different systems.
+- **Performance**: Go offers native compilation speed and efficiency ideal for analyzing large APK files and intensive security scanning operations.
+- **CLI Excellence**: Go is purpose-built for command-line tools with strong standard library support for file I/O, process execution, and signal handling.
+- **Ecosystem**: Direct access to powerful tools like JADX and aapt2 without the overhead of a UI framework designed for mobile apps.
+
+While Dart excels at building Flutter mobile and web apps, Go is the better choice for a developer tool that needs to be lightweight, fast, and dependency-free.
 
 ## Contributing
 
