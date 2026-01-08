@@ -1,140 +1,201 @@
 # FlutterGuard CLI 🔍
 
-Ever wanted to peek inside an Android APK and see what's really hiding in there? FlutterGuard CLI does exactly that—it's a command-line tool that digs deep into Android apps to uncover secrets, API endpoints, suspicious permissions, and security issues. Best of all? It runs completely offline on your machine. No cloud, no tracking, just raw analysis.
+A powerful command-line tool for analyzing Flutter Android apps to discover security issues, secrets, API endpoints, and more. FlutterGuard runs completely offline on your machine—no cloud services, no tracking, just local analysis.
 
-## What does it do?
+## What It Does
 
-FlutterGuard CLI gives you the inside scoop on any Android app:
+FlutterGuard CLI analyzes Flutter app APK files and extracts:
 
-- 🔑 **Secrets & Credentials** — finds API keys, tokens, and hardcoded passwords
-- 🌐 **Network Endpoints** — extracts domains, URLs, API endpoints, and Firebase configs
-- 📦 **App Dependencies** — lists Flutter packages and links to pub.dev for more info
-- 📋 **Metadata** — pulls package name, version, SDK info, and required permissions
-- 🔍 **Third-Party Services** — detects what SDKs, CDNs, and analytics are bundled
-- 📜 **Certificates** — analyzes signing certificates and flags self-signed ones
-- 📁 **Full Breakdown** — organized assets, resources, and complete decompiled code
+- 🔑 **Secrets & API Keys** — Finds hardcoded passwords, tokens, and credentials
+- 🌐 **Network Details** — Extracts URLs, domains, API endpoints, and Firebase configs
+- 📦 **Dependencies** — Lists all Flutter packages with direct links to pub.dev
+- 📋 **App Metadata** — Package name, version, SDK info, and permissions
+- 🔍 **Third-Party Services** — Detects bundled SDKs, CDNs, and analytics libraries
+- 📜 **Certificate Info** — Analyzes signing certificates and flags self-signed ones
+- 📁 **Complete Breakdown** — Organized assets, resources, and full decompiled source code
 
-**Why you'll love it:**
+## Installation
 
-- 🔒 **Privacy first** — runs offline by default, network features are opt-in
-- 📊 **Well-organized output** — generates a clean directory with categorized files and a navigable report
-- ⚡ **Smart decompilation** — uses fast ZIP extraction by default, falls back to JADX if needed
-- 📈 **Real-time feedback** — shows you exactly where it is in the analysis
-- 🎯 **Complete picture** — gives you the decompiled code, assets, and detailed JSON to dig deeper
+### Option 1: Download Pre-Built Binary (Recommended)
 
-## Getting Started
+The easiest way to get started is to download a pre-built binary from the releases page.
 
-### Quickest Way: Download a Release
+**Step 1:** Go to the [Releases page](https://github.com/flutterguard/flutterguard-cli/releases) and download the binary for your system:
 
-Head over to [GitHub Releases](https://github.com/flutterguard/flutterguard-cli/releases) and grab the latest binary for your OS:
+- **Linux (x64)**: `flutterguard-cli-linux-amd64`
+- **Linux (ARM64)**: `flutterguard-cli-linux-arm64`
+- **macOS (Intel)**: `flutterguard-cli-darwin-amd64`
+- **macOS (Apple Silicon)**: `flutterguard-cli-darwin-arm64`
+- **Windows (x64)**: `flutterguard-cli-windows-amd64.exe`
+
+**Step 2:** Install it on your system:
+
+**On Linux or macOS:**
 
 ```bash
-# On Linux or macOS:
-curl -LO https://github.com/flutterguard/flutterguard-cli/releases/latest/download/flutterguard-cli
+# Download (replace with the URL for your platform)
+curl -LO https://github.com/flutterguard/flutterguard-cli/releases/latest/download/flutterguard-cli-linux-amd64
+
+# Rename to remove platform suffix
+mv flutterguard-cli-linux-amd64 flutterguard-cli
+
+# Make it executable
 chmod +x flutterguard-cli
+
+# Move to your PATH (optional, but convenient)
 sudo mv flutterguard-cli /usr/local/bin/
 
-# Test it out
+# Verify installation
 flutterguard-cli --version
 ```
 
-### Build It Yourself
+**On Windows:**
 
-Already have Go? Clone and build in seconds:
+```powershell
+# Download from the releases page, then:
+# 1. Rename flutterguard-cli-windows-amd64.exe to flutterguard-cli.exe
+# 2. Move to a directory in your PATH (e.g., C:\Windows\System32)
+# 3. Or run directly from the download location
+
+# Verify installation
+flutterguard-cli.exe --version
+```
+
+### Option 2: Build From Source
+
+If you have Go installed and want the latest features or to contribute to development:
+
+**Requirements:**
+
+- Go 1.24 or higher ([Download Go](https://go.dev/dl/))
+- Git
+
+**Step 1:** Clone the repository
 
 ```bash
 git clone https://github.com/flutterguard/flutterguard-cli.git
 cd flutterguard-cli
-
-# Build it
-go build -o build/flutterguard-cli
-
-# Optional: add to PATH
-sudo cp build/flutterguard-cli /usr/local/bin/
 ```
 
-**What you need:**
-
-- Go 1.21+
-- That's it! (Everything else is optional)
-
-### Nice-to-Have Tools (Optional)
-
-FlutterGuard works great on its own, but these tools level up the analysis:
-
-- **AAPT2** — gives you richer APK metadata
-  - Linux: `sudo apt install aapt`
-  - macOS: Install via Android SDK
-- **JADX** — better Java decompilation (we use ZIP extraction by default)
-
-  - Get it: https://github.com/skylot/jadx/releases
-  - Or: `brew install jadx`
-
-- **OpenSSL** — for detailed certificate inspection
-  - Usually already on your system
-
-## How to Use It
-
-### The Easiest Way
+**Step 2:** Build the binary
 
 ```bash
-# Point it at an APK and watch it work
+# Build for your current platform
+go build -o build/flutterguard-cli
+
+# The binary will be in the build/ directory
+```
+
+**Step 3:** (Optional) Install to your PATH
+
+```bash
+# On Linux/macOS
+sudo cp build/flutterguard-cli /usr/local/bin/
+
+# On Windows (run as Administrator)
+copy build\flutterguard-cli.exe C:\Windows\System32\
+```
+
+**Step 4:** Verify the installation
+
+```bash
+flutterguard-cli --version
+```
+
+### Optional Tools for Enhanced Analysis
+
+FlutterGuard works standalone, but these tools provide richer analysis:
+
+- **AAPT2** — Enhanced APK metadata extraction
+  - Linux: `sudo apt install aapt`
+  - macOS: Included with Android SDK
+  - Windows: Download from Android SDK
+- **JADX** — Advanced Java decompilation
+  - Download: [github.com/skylot/jadx/releases](https://github.com/skylot/jadx/releases)
+  - Or via Homebrew: `brew install jadx`
+- **OpenSSL** — Detailed certificate inspection (usually pre-installed on Linux/macOS)
+
+## Usage
+
+### Basic Analysis
+
+Analyze a Flutter app APK and save organized results to a directory:
+
+```bash
+flutterguard-cli --apk app.apk --outDir ./results
+```
+
+This creates a folder named after the app's package (e.g., `results/com.example.app/`) containing all findings, assets, and decompiled code.
+
+### Show Progress
+
+Add `--verbose` to see real-time progress updates:
+
+```bash
 flutterguard-cli --apk app.apk --outDir ./results --verbose
 ```
 
-That's it! It'll create a nice folder called `results/com.example.app/` with everything organized and ready to explore.
+### Output Formats
 
-### Want Different Output?
+**JSON format** (default, good for automation):
 
 ```bash
-# Just get JSON you can pipe around
 flutterguard-cli --apk app.apk --format json
+```
 
-# Or a quick text summary
+**Text format** (human-readable summary):
+
+```bash
 flutterguard-cli --apk app.apk --format text
+```
 
-# Output to a specific folder
+**Structured directory** (most comprehensive):
+
+```bash
 flutterguard-cli --apk app.apk --outDir ~/my-analysis
 ```
 
-### Privacy-Focused by Default
+### Network Features (Opt-In)
 
-By default, FlutterGuard stays offline—no DNS lookups, no HTTP requests. If you want it to validate domains and check pub.dev for more info about dependencies:
+By default, FlutterGuard runs completely offline. Enable network features for:
+
+- Domain DNS validation
+- pub.dev package information enrichment
 
 ```bash
 flutterguard-cli --apk app.apk --outDir ./results --enable-network-and-dns-checks
 ```
 
-### All Available Options
+### Command Reference
 
-| Flag                              | What it does                           | Default |
-| --------------------------------- | -------------------------------------- | ------- |
-| `--apk`                           | The APK file to analyze **(required)** | —       |
-| `--outDir`                        | Where to save the results folder       | stdout  |
-| `--format`                        | Output style: `json` or `text`         | `json`  |
-| `--verbose`                       | Show progress as it runs               | off     |
-| `--enable-network-and-dns-checks` | Enable online features                 | off     |
-| `--version`                       | Show version number                    | —       |
-| `--help`                          | Show all options                       | —       |
+| Flag                              | Description                                         | Default  |
+| --------------------------------- | --------------------------------------------------- | -------- |
+| `--apk`                           | Flutter app APK file path to analyze **(required)** | —        |
+| `--outDir`                        | Directory to save structured results                | stdout   |
+| `--format`                        | Output format: `json` or `text`                     | `json`   |
+| `--verbose`                       | Show detailed progress during analysis              | disabled |
+| `--enable-network-and-dns-checks` | Enable online features                              | disabled |
+| `--version`                       | Show version information                            | —        |
+| `--help`                          | Show help message                                   | —        |
 
-## What You Get
+## Output Structure
 
-When you run with `--outDir`, FlutterGuard creates a beautifully organized folder:
+When using `--outDir`, FlutterGuard creates an organized directory structure:
 
 ```
 results/
 └── com.example.app/
-    ├── summary.md               ← Start here! Human-readable report with links
-    ├── analysis.json            ← Full structured data for scripts/tools
-    ├── emails.txt               ← All email addresses found
+    ├── summary.md               ← Start here! Overview with clickable links
+    ├── analysis.json            ← Full structured data (JSON)
+    ├── emails.txt               ← Email addresses found
     ├── domains.txt              ← Domain names and hosts
-    ├── urls.txt                 ← Complete list of URLs
-    ├── api_endpoints.txt        ← API calls with HTTP methods
-    ├── packages.txt             ← Flutter packages + pub.dev links
-    ├── permissions.txt          ← Android permissions (⚠️ marks dangerous ones)
-    ├── services.txt             ← Third-party SDKs and services
+    ├── urls.txt                 ← All URLs discovered
+    ├── api_endpoints.txt        ← API endpoints with HTTP methods
+    ├── packages.txt             ← Flutter packages with pub.dev links
+    ├── permissions.txt          ← Android permissions (⚠️ = dangerous)
+    ├── services.txt             ← Third-party SDKs detected
     ├── hardcoded_keys.txt       ← Potential secrets and API keys
-    ├── assets/                  ← App resources organized by file type
+    ├── assets/                  ← App resources by file type
     │   ├── json/
     │   ├── png/
     │   ├── xml/
@@ -142,129 +203,104 @@ results/
     │   └── ...
     └── decompiled/              ← Complete APK contents
         ├── AndroidManifest.xml
-        ├── classes.dex          ← Compiled Java code
-        ├── lib/                 ← Native .so libraries
+        ├── classes.dex
+        ├── lib/                 ← Native libraries (.so files)
         ├── res/                 ← App resources
-        ├── assets/              ← Embedded files
+        ├── assets/              ← Embedded assets
         └── META-INF/            ← Signing certificates
 ```
 
-**Pro tip:** Open `summary.md` in any markdown viewer or on GitHub—it has a table of contents with clickable links to everything else!
+**Tip:** Open `summary.md` in any markdown viewer—it includes a table of contents with links to all findings.
 
-## Inside the Code
-
-### Folder Layout
+## Project Structure
 
 ```
 flutterguard-cli/
-├── main.go                  # Entry point (just calls the CLI)
-├── cmd/                     # Command-line magic
-│   ├── root.go             # Defines all the flags
-│   ├── analyze.go          # Orchestrates the actual analysis
-│   ├── output.go           # Saves results to folders
-│   ├── output_text.go      # Text report generator
-│   └── output_markdown.go  # Markdown report generator
-├── analyzer/               # Where the real work happens
-│   ├── analyzer.go         # Main analysis pipeline
-│   ├── config.go           # Configuration options
-│   ├── progress.go         # Progress event types
-│   ├── decompiler.go       # Smart decompilation strategy picker
-│   ├── jadx_decompiler.go  # JADX integration
-│   ├── apk_zip_decompiler.go  # Fast ZIP extraction
-│   ├── aapt2_extractor.go  # APK metadata via AAPT2
-│   ├── certificate_analyzer.go  # Certificate inspection
-│   ├── patterns.go         # Regex patterns for finding stuff
-│   ├── validators.go       # Email/URL/domain checkers
-│   ├── pubdev.go           # Talks to pub.dev API
-│   ├── secrets_detector.go # Finds API keys and secrets
-│   ├── assets_scanner.go   # Finds embedded files
-│   ├── file_types.go       # File analysis
-│   └── ...
+├── main.go                     # Application entry point
+├── cmd/                        # CLI commands and output
+│   ├── root.go                # Command definitions and flags
+│   ├── analyze.go             # Analysis orchestration
+│   ├── output.go              # Structured directory output
+│   ├── output_text.go         # Text report formatting
+│   └── output_markdown.go     # Markdown report generation
+├── analyzer/                   # Core analysis logic
+│   ├── analyzer.go            # Main analysis pipeline
+│   ├── config.go              # Configuration structures
+│   ├── progress.go            # Progress reporting
+│   ├── decompiler.go          # Decompilation strategy
+│   ├── secrets_detector.go   # Secret pattern matching
+│   ├── assets_scanner.go     # Asset discovery
+│   └── ...                    # Other analysis modules
 └── models/
-    └── models.go           # Data structure definitions
+    └── models.go              # Data structures
 ```
 
-### How It Works (High Level)
+## Contributing
 
-1. **CLI Layer** — parses your flags and arguments (via Cobra)
-2. **Analysis Layer** — does the heavy lifting (decompiles, extracts, validates)
-3. **Data Layer** — passes results around using structured types
-4. **Output Layer** — saves to disk in nice organized folders
+Contributions are welcome! Whether it's bug fixes, new features, or documentation improvements.
 
-### Design Philosophy
-
-- **Offline first** — privacy matters, so everything runs local by default
-- **Graceful degradation** — missing tools? No problem, use what you've got
-- **Progress visibility** — people like to know what's happening (shows 10%, 20%... 100%)
-- **Smart defaults** — organized folder structure, markdown reports, everything categorized
-- **Package-based naming** — output folder named after the actual app package
-
-## Want to Help?
-
-We'd love your contributions! Whether it's a bug fix, new feature, or just improving docs.
-
-### Getting Started as a Contributor
+### Development Setup
 
 ```bash
-# 1. Fork the repo on GitHub
-# 2. Clone your fork
+# Fork and clone the repository
 git clone https://github.com/YOUR_USERNAME/flutterguard-cli.git
 cd flutterguard-cli
 
-# 3. Grab dependencies
+# Download dependencies
 go mod download
 
-# 4. Build it
+# Build the project
 go build -o build/flutterguard-cli
 
-# 5. Make your changes and test
+# Run tests
 go test ./...
 ```
 
-### What We Need Help With
+### Areas for Contribution
 
-- 🔍 **New Detection Patterns** — find more secrets and suspicious code
-- 🛠️ **Tool Support** — integrate other decompilers or analyzers
-- 📊 **Report Formats** — HTML, PDF, CSV exports
-- 🐛 **Bug Fixes** — found a problem? Fix it!
-- 📚 **Docs & Examples** — tutorials, use cases, write-ups
-- 🌍 **Internationalization** — help translate
+- 🔍 New detection patterns for secrets and suspicious code
+- 🛠️ Integration with additional analysis tools
+- 📊 New report formats (HTML, PDF, CSV)
+- 🐛 Bug fixes and performance improvements
+- 📚 Documentation and examples
+- 🌍 Internationalization support
 
-### How to Contribute
+### Submitting Changes
 
-1. Fork and create a feature branch
-2. Make your changes with clear, descriptive commit messages
-3. Add tests for new features
-4. Update docs if needed
-5. Run `go test ./...` to make sure everything works
-6. Submit a pull request with details about what you changed
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes with clear commit messages
+4. Add tests for new functionality
+5. Run `go test ./...` and `go vet ./...`
+6. Submit a pull request with a clear description
 
-### Our Code Style
+### Code Guidelines
 
-- Follow standard Go style (`gofmt`, `go vet`)
-- Use clear, meaningful names for functions and variables
-- Comment exported functions and tricky logic
-- Keep functions small and focused on one thing
+- Follow standard Go formatting (`gofmt`, `go vet`)
+- Use descriptive names for functions and variables
+- Comment exported functions and complex logic
+- Keep functions focused and reasonably sized
+- Write tests for new features
 
-### Found a Bug?
+### Reporting Issues
 
-Open an [issue](https://github.com/flutterguard/flutterguard-cli/issues) and tell us:
+Found a bug? [Open an issue](https://github.com/flutterguard/flutterguard-cli/issues) with:
 
-- What you were trying to do
-- What went wrong
-- What you expected to happen
-- Your OS, Go version, and any other relevant details
+- Description of what you tried to do
+- What happened vs. what you expected
+- Your OS, Go version, and FlutterGuard version
+- Steps to reproduce (if possible)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
 - [JADX](https://github.com/skylot/jadx) - Dex to Java decompiler
 - [Cobra](https://github.com/spf13/cobra) - CLI framework
-- Android SDK Tools - APK metadata extraction
+- Android SDK Tools - APK analysis utilities
 
 ---
 
-**Built with ❤️ for the Flutter and Android security community**
+**Built for the Flutter and Android security community**
