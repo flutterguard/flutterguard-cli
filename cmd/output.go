@@ -11,29 +11,17 @@ import (
 )
 
 func outputResults(results *models.Results, config *CLIConfig) error {
-
-	if config.OutputDir != "" {
-		return saveStructuredOutput(results, config)
-	}
-
-	// Otherwise, output to stdout in requested format
-	var output []byte
-	var err error
-
-	switch config.OutputFormat {
-	case "json":
-		output, err = json.MarshalIndent(results, "", "  ")
+	// If outDir is not specified, default to current directory
+	// and create the package-named folder there.
+	if config.OutputDir == "" {
+		cwd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to marshal results: %w", err)
+			return fmt.Errorf("failed to get current directory: %w", err)
 		}
-	case "text":
-		output = []byte(formatTextReport(results))
-	default:
-		return fmt.Errorf("unsupported output format: %s", config.OutputFormat)
+		config.OutputDir = cwd
 	}
 
-	fmt.Println(string(output))
-	return nil
+	return saveStructuredOutput(results, config)
 }
 
 func saveStructuredOutput(results *models.Results, config *CLIConfig) error {
@@ -175,12 +163,15 @@ func saveStructuredOutput(results *models.Results, config *CLIConfig) error {
 		}
 	}
 
+	hasDecompiled := false
 	if results.DecompiledDirPath != "" {
 		decompiledSrc := results.DecompiledDirPath
 		decompiledDest := filepath.Join(outDir, "decompiled")
 
 		if _, err := os.Stat(decompiledSrc); err == nil {
+			hasDecompiled = true
 			if err := copyDirectory(decompiledSrc, decompiledDest); err != nil {
+				hasDecompiled = false
 				if config.Verbose {
 					fmt.Printf("Warning: failed to copy decompiled directory: %v\n", err)
 				}
@@ -201,54 +192,165 @@ func saveStructuredOutput(results *models.Results, config *CLIConfig) error {
 		return fmt.Errorf("failed to write analysis: %w", err)
 	}
 
-	displayOutputSummary(results, outDir, allURLs, len(allAssets), results.DecompiledDirPath != "", config.Verbose)
+	displayOutputSummary(results, outDir, allURLs, len(allAssets), hasDecompiled, config.Verbose)
 
 	return nil
 }
 
 func displayOutputSummary(results *models.Results, outDir string, allURLs []string, assetCount int, hasDecompiled bool, verbose bool) {
-	fmt.Fprintf(os.Stderr, "\n📊 Analysis Results:\n")
-	fmt.Fprintf(os.Stderr, "   Saved to: %s\n\n", outDir)
+	// App identity
+	pkg := ""
+	verName := ""
+	verCode := ""
+	minSDK := ""
+	targetSDK := ""
+	if results.AAPT2Metadata != nil && results.AAPT2Metadata.Badging != nil {
+		b := results.AAPT2Metadata.Badging
+		if b.PackageName != "" {
+			pkg = b.PackageName
+		}
+		verName = b.VersionName
+		verCode = b.VersionCode
+		minSDK = b.MinSdkVersion
+		targetSDK = b.TargetSdkVersion
+	}
+	if pkg == "" && results.AppInfo.PackageName != "" {
+		pkg = results.AppInfo.PackageName
+	}
+	if verName == "" && results.AppInfo.VersionName != "" {
+		verName = results.AppInfo.VersionName
+	}
+	if verCode == "" && results.AppInfo.VersionCode != "" {
+		verCode = results.AppInfo.VersionCode
+	}
+	if minSDK == "" && results.AppInfo.MinSDKVersion != "" {
+		minSDK = results.AppInfo.MinSDKVersion
+	}
+	if targetSDK == "" && results.AppInfo.TargetSDK != "" {
+		targetSDK = results.AppInfo.TargetSDK
+	}
 
-	stats := make([]string, 0)
+	fmt.Fprintf(os.Stderr, "\n📊 Analysis Results\n")
+	fmt.Fprintf(os.Stderr, "   Saved to: %s\n", outDir)
+	if pkg != "" {
+		if verName != "" || verCode != "" {
+			fmt.Fprintf(os.Stderr, "   App: %s (v%s, code %s)\n", pkg, safeStr(verName), safeStr(verCode))
+		} else {
+			fmt.Fprintf(os.Stderr, "   App: %s\n", pkg)
+		}
+	}
+	if minSDK != "" || targetSDK != "" {
+		fmt.Fprintf(os.Stderr, "   SDK: min %s, target %s\n", safeStr(minSDK), safeStr(targetSDK))
+	}
+	fmt.Fprintln(os.Stderr)
 
-	if len(results.Emails) > 0 {
-		stats = append(stats, fmt.Sprintf("   📧 Emails: %d", len(results.Emails)))
+	// High-level stats
+	type kv struct {
+		k string
+		v int
 	}
-	if len(results.Domains) > 0 {
-		stats = append(stats, fmt.Sprintf("   🌐 Domains: %d", len(results.Domains)))
-	}
-	if len(allURLs) > 0 {
-		stats = append(stats, fmt.Sprintf("   🔗 URLs: %d", len(allURLs)))
-	}
-	if len(results.APIEndpoints) > 0 {
-		stats = append(stats, fmt.Sprintf("   🔌 API Endpoints: %d", len(results.APIEndpoints)))
-	}
-	if len(results.Packages) > 0 {
-		stats = append(stats, fmt.Sprintf("   📦 Packages: %d", len(results.Packages)))
-	}
-	if len(results.Permissions) > 0 {
-		stats = append(stats, fmt.Sprintf("   🛡️  Permissions: %d", len(results.Permissions)))
-	}
-	if len(results.HardcodedKeys) > 0 {
-		stats = append(stats, fmt.Sprintf("   🔑 Secrets: %d", len(results.HardcodedKeys)))
-	}
-	if len(results.Services) > 0 {
-		stats = append(stats, fmt.Sprintf("   🔗 Services: %d", len(results.Services)))
-	}
-	if assetCount > 0 {
-		stats = append(stats, fmt.Sprintf("   🎨 Assets: %d files", assetCount))
+	stats := []kv{
+		{"📧 Emails", len(results.Emails)},
+		{"🌐 Domains", len(results.Domains)},
+		{"🔗 URLs", len(allURLs)},
+		{"🔌 API Endpoints", len(results.APIEndpoints)},
+		{"📦 Packages", len(results.Packages)},
+		{"🛡️ Permissions", len(results.Permissions)},
+		{"🔑 Secrets", len(results.HardcodedKeys)},
+		{"🔗 Services", len(results.Services)},
+		{"🎨 Assets", assetCount},
 	}
 	if hasDecompiled {
-		stats = append(stats, fmt.Sprintf("   📁 Decompiled: Full APK source"))
+		fmt.Fprintf(os.Stderr, "   📁 Decompiled: Full APK source\n")
+	}
+	// Print stats in two columns
+	printed := 0
+	for _, s := range stats {
+		if s.v > 0 {
+			fmt.Fprintf(os.Stderr, "   %s: %d", s.k, s.v)
+			printed++
+			if printed%2 == 0 {
+				fmt.Fprintln(os.Stderr)
+			} else {
+				fmt.Fprint(os.Stderr, " |")
+			}
+		}
+	}
+	if printed%2 != 0 {
+		fmt.Fprintln(os.Stderr)
 	}
 
-	for i := 0; i < len(stats); i++ {
-		fmt.Fprintf(os.Stderr, "%s", stats[i])
-		if (i+1)%2 == 0 || i == len(stats)-1 {
-			fmt.Fprintf(os.Stderr, "\n")
+	// Highlights (top items)
+	showTop := func(title string, items []string, limit int) {
+		if len(items) == 0 {
+			return
+		}
+		n := limit
+		if len(items) < n {
+			n = len(items)
+		}
+		fmt.Fprintf(os.Stderr, "\n%s:\n", title)
+		for i := 0; i < n; i++ {
+			fmt.Fprintf(os.Stderr, "   • %s\n", items[i])
+		}
+		if len(items) > n {
+			fmt.Fprintf(os.Stderr, "   …and %d more\n", len(items)-n)
+		}
+	}
+
+	if len(results.Domains) > 0 {
+		showTop("Top domains", results.Domains, 5)
+	}
+	if len(results.APIEndpoints) > 0 {
+		eps := make([]string, 0, len(results.APIEndpoints))
+		for _, ep := range results.APIEndpoints {
+			m := ep.Method
+			if m == "" {
+				m = "GET"
+			}
+			eps = append(eps, fmt.Sprintf("%s %s", m, ep.URL))
+		}
+		showTop("API endpoints", eps, 5)
+	}
+	if len(results.HardcodedKeys) > 0 {
+		showTop("Potential secrets", results.HardcodedKeys, 5)
+	}
+
+	// Security quick glance
+	securityLines := []string{}
+	if results.CertificateInfo != nil {
+		cc := len(results.CertificateInfo.Certificates)
+		if cc > 0 {
+			selfSigned := 0
+			expired := 0
+			for _, c := range results.CertificateInfo.Certificates {
+				if c.IsSelfSigned {
+					selfSigned++
+				}
+				if c.IsExpired {
+					expired++
+				}
+			}
+			securityLines = append(securityLines, fmt.Sprintf("Certificates: %d (self-signed: %d, expired: %d)", cc, selfSigned, expired))
+		}
+	}
+	if results.NetworkSecurity != nil {
+		if results.NetworkSecurity.CleartextAllowed {
+			securityLines = append(securityLines, "Cleartext traffic: allowed")
 		} else {
-			fmt.Fprintf(os.Stderr, " | ")
+			securityLines = append(securityLines, "Cleartext traffic: disallowed")
+		}
+		if results.NetworkSecurity.CertificatePinning {
+			securityLines = append(securityLines, "Certificate pinning: enabled")
+		}
+	}
+	if results.Obfuscation != nil && results.Obfuscation.LikelyObfuscated {
+		securityLines = append(securityLines, "Code obfuscation detected")
+	}
+	if len(securityLines) > 0 {
+		fmt.Fprintf(os.Stderr, "\nSecurity:\n")
+		for _, l := range securityLines {
+			fmt.Fprintf(os.Stderr, "   • %s\n", l)
 		}
 	}
 
@@ -303,6 +405,13 @@ func sanitizeFileName(name string) string {
 	name = strings.ReplaceAll(name, ">", "_")
 	name = strings.ReplaceAll(name, "|", "_")
 	return name
+}
+
+func safeStr(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "-"
+	}
+	return s
 }
 
 func writeLines(path string, lines []string) error {
