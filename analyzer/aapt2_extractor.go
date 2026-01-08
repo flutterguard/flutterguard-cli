@@ -97,7 +97,33 @@ func (a *AAPT2Extractor) ExtractBadging(ctx context.Context, apkPath string) (*m
 			log.Printf("[AAPT2] Output: %s", output)
 		}
 	} else {
-		log.Printf("✓ Extracted APK metadata (package: %s, version: %s, min SDK: %s)", badging.PackageName, badging.VersionName, badging.MinSdkVersion)
+		// Build a comprehensive summary of badging details
+		details := fmt.Sprintf("package: %s", badging.PackageName)
+		if badging.VersionName != "" {
+			details += fmt.Sprintf(", version: %s", badging.VersionName)
+		}
+		if badging.VersionCode != "" {
+			details += fmt.Sprintf(" (build %s)", badging.VersionCode)
+		}
+		minSDK := badging.MinSdkVersion
+		if minSDK == "" {
+			minSDK = "-"
+		}
+		targetSDK := badging.TargetSdkVersion
+		if targetSDK == "" {
+			targetSDK = "-"
+		}
+		details += fmt.Sprintf(", SDK: min %s → target %s", minSDK, targetSDK)
+		if badging.ApplicationLabel != "" {
+			details += fmt.Sprintf(", label: %s", badging.ApplicationLabel)
+		}
+		if len(badging.UsesPermissions) > 0 {
+			details += fmt.Sprintf(", permissions: %d", len(badging.UsesPermissions))
+		}
+		if len(badging.NativeCode) > 0 {
+			details += fmt.Sprintf(", archs: %s", strings.Join(badging.NativeCode, ","))
+		}
+		log.Printf("✓ Extracted APK metadata (%s)", details)
 	}
 
 	return badging, nil
