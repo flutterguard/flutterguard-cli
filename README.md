@@ -16,91 +16,108 @@ FlutterGuard CLI analyzes Flutter app APK files and extracts:
 
 ## Installation
 
-### Option 1: Download Pre-Built Binary (Recommended)
+### Quick Install (Recommended)
 
-The easiest way to get started is to download a pre-built binary from the releases page.
+**One-line install for Linux/macOS:**
 
-**Step 1:** Go to the [Releases page](https://github.com/flutterguard/flutterguard-cli/releases) and download the binary for your system:
+```bash
+curl -sSL https://raw.githubusercontent.com/flutterguard/flutterguard-cli/main/install.sh | bash
+```
 
-- **Linux (x64)**: `flutterguard-cli-linux-amd64`
-- **Linux (ARM64)**: `flutterguard-cli-linux-arm64`
-- **macOS (Intel)**: `flutterguard-cli-darwin-amd64`
-- **macOS (Apple Silicon)**: `flutterguard-cli-darwin-arm64`
-- **Windows (x64)**: `flutterguard-cli-windows-amd64.exe`
+**One-line install for Windows (PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/flutterguard/flutterguard-cli/main/install.ps1 | iex
+```
+
+The script will automatically detect your OS/architecture, download the latest release, and install it to your PATH.
+
+---
+
+### Manual Installation
+
+<details>
+<summary><b>Option 1: Download Pre-Built Binary</b></summary>
+
+**Step 1:** Download from [Releases](https://github.com/flutterguard/flutterguard-cli/releases/latest):
+
+| Platform              | Download Link                                                                                                                                      |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux (x64)           | [flutterguard-cli-linux-amd64](https://github.com/flutterguard/flutterguard-cli/releases/latest/download/flutterguard-cli-linux-amd64)             |
+| Linux (ARM64)         | [flutterguard-cli-linux-arm64](https://github.com/flutterguard/flutterguard-cli/releases/latest/download/flutterguard-cli-linux-arm64)             |
+| macOS (Intel)         | [flutterguard-cli-darwin-amd64](https://github.com/flutterguard/flutterguard-cli/releases/latest/download/flutterguard-cli-darwin-amd64)           |
+| macOS (Apple Silicon) | [flutterguard-cli-darwin-arm64](https://github.com/flutterguard/flutterguard-cli/releases/latest/download/flutterguard-cli-darwin-arm64)           |
+| Windows (x64)         | [flutterguard-cli-windows-amd64.exe](https://github.com/flutterguard/flutterguard-cli/releases/latest/download/flutterguard-cli-windows-amd64.exe) |
 
 **Step 2:** Install it on your system:
 
-**On Linux or macOS:**
+**Linux/macOS:**
 
 ```bash
-# Download (replace with the URL for your platform)
-curl -LO https://github.com/flutterguard/flutterguard-cli/releases/latest/download/flutterguard-cli-linux-amd64
+# Make executable
+chmod +x flutterguard-cli-*
 
-# Rename to remove platform suffix
-mv flutterguard-cli-linux-amd64 flutterguard-cli
+# Install to PATH
+sudo mv flutterguard-cli-* /usr/local/bin/flutterguard-cli
 
-# Make it executable
-chmod +x flutterguard-cli
-
-# Move to your PATH (optional, but convenient)
-sudo mv flutterguard-cli /usr/local/bin/
-
-# Verify installation
+# Verify
 flutterguard-cli --version
 ```
 
-**On Windows:**
+**Windows:**
+
+1. Rename the downloaded file to `flutterguard-cli.exe`
+2. Move it to a directory in your PATH (e.g., `C:\Windows\System32`)
+3. Or keep it anywhere and add that directory to your PATH
 
 ```powershell
-# Download from the releases page, then:
-# 1. Rename flutterguard-cli-windows-amd64.exe to flutterguard-cli.exe
-# 2. Move to a directory in your PATH (e.g., C:\Windows\System32)
-# 3. Or run directly from the download location
-
-# Verify installation
+# Verify
 flutterguard-cli.exe --version
 ```
 
-### Option 2: Build From Source
+</details>
 
-If you have Go installed and want the latest features or to contribute to development:
+<details>
+<summary><b>Option 2: Build From Source</b></summary>
 
 **Requirements:**
 
-- Go 1.24 or higher ([Download Go](https://go.dev/dl/))
+- Go 1.24+ ([Download Go](https://go.dev/dl/))
 - Git
 
-**Step 1:** Clone the repository
+**Steps:**
 
 ```bash
+# Clone the repository
 git clone https://github.com/flutterguard/flutterguard-cli.git
 cd flutterguard-cli
-```
 
-**Step 2:** Build the binary
+# Build
+go build -o flutterguard-cli
 
-```bash
-# Build for your current platform
-go build -o build/flutterguard-cli
+# Install (optional)
+sudo mv flutterguard-cli /usr/local/bin/
 
-# The binary will be in the build/ directory
-```
-
-**Step 3:** (Optional) Install to your PATH
-
-```bash
-# On Linux/macOS
-sudo cp build/flutterguard-cli /usr/local/bin/
-
-# On Windows (run as Administrator)
-copy build\flutterguard-cli.exe C:\Windows\System32\
-```
-
-**Step 4:** Verify the installation
-
-```bash
+# Verify
 flutterguard-cli --version
 ```
+
+</details>
+
+<details>
+<summary><b>Option 3: Package Managers</b> (Coming Soon)</summary>
+
+We're working on adding support for popular package managers:
+
+- **Homebrew** (macOS/Linux): `brew install flutterguard-cli`
+- **Snap** (Linux): `snap install flutterguard-cli`
+- **Chocolatey** (Windows): `choco install flutterguard-cli`
+- **AUR** (Arch Linux): `yay -S flutterguard-cli`
+- **Scoop** (Windows): `scoop install flutterguard-cli`
+
+Stay tuned for updates!
+
+</details>
 
 ### Optional Tools for Enhanced Analysis
 
