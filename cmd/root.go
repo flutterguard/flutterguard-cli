@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Version = "0.9.3"
+const Version = "0.9.4"
 
 // CLIConfig holds CLI options passed via flags
 type CLIConfig struct {
