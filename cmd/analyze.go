@@ -31,6 +31,7 @@ func runAnalysis(apkPath string, config *CLIConfig) error {
 
 	cliCfg := &analyzer.Config{
 		DisableNetworkChecks: !config.EnableNetworkAndDNS,
+		Verbose:              config.Verbose,
 	}
 
 	a := analyzer.NewAnalyzer(cliCfg)

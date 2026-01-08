@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+
 	models "github.com/flutterguard/flutterguard-cli/models"
 )
 
@@ -49,7 +50,9 @@ func (d *Decompiler) DecompileWithStrategies(ctx context.Context, apkPath, outpu
 		attemptLog := []string{fmt.Sprintf("[%s] Strategy %s: starting evaluation (apk=%s, output=%s)", stamp(), strategy.Name(), apkPath, outputDir)}
 		canHandle, err := strategy.CanHandle(apkPath)
 		if err != nil {
-			log.Printf("Strategy %s cannot handle APK: %v", strategy.Name(), err)
+			if d.cfg.Verbose {
+				log.Printf("Strategy %s cannot handle APK: %v", strategy.Name(), err)
+			}
 			lastErr = err
 			attempts = append(attempts, fmt.Sprintf("%s (unavailable)", strategy.Name()))
 			attemptLog = append(attemptLog, fmt.Sprintf("[%s] Compatibility check failed: %v", stamp(), err))
@@ -58,14 +61,18 @@ func (d *Decompiler) DecompileWithStrategies(ctx context.Context, apkPath, outpu
 		}
 
 		if !canHandle {
-			log.Printf("Strategy %s reports it cannot handle this APK", strategy.Name())
+			if d.cfg.Verbose {
+				log.Printf("Strategy %s reports it cannot handle this APK", strategy.Name())
+			}
 			attempts = append(attempts, fmt.Sprintf("%s (incompatible)", strategy.Name()))
 			attemptLog = append(attemptLog, fmt.Sprintf("[%s] Strategy marked APK as incompatible", stamp()))
 			attemptDetails = append(attemptDetails, models.DecompilationAttempt{Strategy: strategy.Name(), Success: false, Error: "incompatible with APK", Logs: attemptLog})
 			continue
 		}
 
-		log.Printf("Attempting decompilation with: %s", strategy.Name())
+		if d.cfg.Verbose {
+			log.Printf("Attempting decompilation with: %s", strategy.Name())
+		}
 		attempts = append(attempts, strategy.Name())
 		attemptLog = append(attemptLog, fmt.Sprintf("[%s] Strategy ready; invoking decompile", stamp()))
 		if cmdSummary := d.describeStrategyCommand(strategy, apkPath, outputDir); cmdSummary != "" {
@@ -75,7 +82,9 @@ func (d *Decompiler) DecompileWithStrategies(ctx context.Context, apkPath, outpu
 
 		err = strategy.Decompile(ctx, apkPath, outputDir)
 		if err == nil {
-			log.Printf("Successfully decompiled using: %s", strategy.Name())
+			if d.cfg.Verbose {
+				log.Printf("Successfully decompiled using: %s", strategy.Name())
+			}
 			attemptDetails[len(attemptDetails)-1].Success = true
 			attemptDetails[len(attemptDetails)-1].Logs = append(attemptDetails[len(attemptDetails)-1].Logs, fmt.Sprintf("[%s] Decompilation succeeded", stamp()))
 			return &DecompilerResult{
@@ -87,7 +96,9 @@ func (d *Decompiler) DecompileWithStrategies(ctx context.Context, apkPath, outpu
 			}, nil
 		}
 
-		log.Printf("Strategy %s failed: %v", strategy.Name(), err)
+		if d.cfg.Verbose {
+			log.Printf("Strategy %s failed: %v", strategy.Name(), err)
+		}
 		attemptDetails[len(attemptDetails)-1].Error = err.Error()
 		attemptDetails[len(attemptDetails)-1].Logs = append(attemptDetails[len(attemptDetails)-1].Logs, fmt.Sprintf("[%s] Decompilation failed: %v", stamp(), err))
 		lastErr = err

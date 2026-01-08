@@ -4,6 +4,8 @@ package analyzer
 type Config struct {
 	// Validation
 	DisableNetworkChecks bool
+	// Logging
+	Verbose bool
 }
 
 // NewDefaultConfig returns a config with sensible defaults

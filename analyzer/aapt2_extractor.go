@@ -13,20 +13,28 @@ import (
 )
 
 // AAPT2Extractor handles extraction of metadata using aapt2 command
-type AAPT2Extractor struct{}
+type AAPT2Extractor struct {
+	cfg *Config
+}
 
-func NewAAPT2Extractor() *AAPT2Extractor {
-	return &AAPT2Extractor{}
+func NewAAPT2Extractor(cfg *Config) *AAPT2Extractor {
+	return &AAPT2Extractor{cfg: cfg}
 }
 
 // IsAvailable checks if aapt2 command is available in PATH
 func (a *AAPT2Extractor) IsAvailable() bool {
 	path, err := exec.LookPath("aapt2")
 	if err != nil {
-		log.Printf("[AAPT2] aapt2 not found in PATH: %v", err)
+		if a.cfg.Verbose {
+			log.Printf("[AAPT2] aapt2 not found in PATH: %v", err)
+		}
 		return false
 	}
-	log.Printf("[AAPT2] Found aapt2 at: %s", path)
+	if a.cfg.Verbose {
+		log.Printf("[AAPT2] Found aapt2 at: %s", path)
+	} else {
+		log.Printf("✓ aapt2 tool found")
+	}
 	return true
 }
 
@@ -68,22 +76,32 @@ func (a *AAPT2Extractor) ExtractBadging(ctx context.Context, apkPath string) (*m
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	log.Printf("[AAPT2] Executing: %s %s %s %s %s", "aapt2", "dump", "badging", apkPath, "")
+	if a.cfg.Verbose {
+		log.Printf("[AAPT2] Executing: %s %s %s %s %s", "aapt2", "dump", "badging", apkPath, "")
+	}
 
 	if err := cmd.Run(); err != nil {
-		log.Printf("[AAPT2] Command failed: %v (stderr: %s)", err, stderr.String())
+		if a.cfg.Verbose {
+			log.Printf("[AAPT2] Command failed: %v (stderr: %s)", err, stderr.String())
+		}
 		return nil, fmt.Errorf("aapt2 dump badging failed: %w (stderr: %s)", err, stderr.String())
 	}
 
 	output := stdout.String()
-	log.Printf("[AAPT2] Command output length: %d bytes", len(output))
-	if len(output) > 500 {
-		log.Printf("[AAPT2] Output preview: %s...", output[:500])
+	badging := a.parseBadging(output)
+
+	if a.cfg.Verbose {
+		log.Printf("[AAPT2] Command output length: %d bytes", len(output))
+		if len(output) > 500 {
+			log.Printf("[AAPT2] Output preview: %s...", output[:500])
+		} else {
+			log.Printf("[AAPT2] Output: %s", output)
+		}
 	} else {
-		log.Printf("[AAPT2] Output: %s", output)
+		log.Printf("✓ Extracted APK metadata (package: %s, version: %s, min SDK: %s)", badging.PackageName, badging.VersionName, badging.MinSdkVersion)
 	}
 
-	return a.parseBadging(output), nil
+	return badging, nil
 }
 
 // parseBadging parses the output of aapt2 dump badging command
@@ -213,15 +231,21 @@ func (a *AAPT2Extractor) ExtractPermissions(ctx context.Context, apkPath string)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	log.Printf("[AAPT2] Executing: aapt2 dump permissions %s", apkPath)
+	if a.cfg.Verbose {
+		log.Printf("[AAPT2] Executing: aapt2 dump permissions %s", apkPath)
+	}
 
 	if err := cmd.Run(); err != nil {
-		log.Printf("[AAPT2] Command failed: %v (stderr: %s)", err, stderr.String())
+		if a.cfg.Verbose {
+			log.Printf("[AAPT2] Command failed: %v (stderr: %s)", err, stderr.String())
+		}
 		return nil, fmt.Errorf("aapt2 dump permissions failed: %w (stderr: %s)", err, stderr.String())
 	}
 
 	output := stdout.String()
-	log.Printf("[AAPT2] Permissions output length: %d bytes", len(output))
+	if a.cfg.Verbose {
+		log.Printf("[AAPT2] Permissions output length: %d bytes", len(output))
+	}
 	lines := strings.Split(output, "\n")
 	var permissions []string
 
@@ -234,6 +258,10 @@ func (a *AAPT2Extractor) ExtractPermissions(ctx context.Context, apkPath string)
 		}
 	}
 
+	if !a.cfg.Verbose && len(permissions) > 0 {
+		log.Printf("✓ Found %d permissions", len(permissions))
+	}
+
 	return permissions, nil
 }
 
@@ -244,15 +272,21 @@ func (a *AAPT2Extractor) ExtractStrings(ctx context.Context, apkPath string) ([]
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	log.Printf("[AAPT2] Executing: aapt2 dump strings %s", apkPath)
+	if a.cfg.Verbose {
+		log.Printf("[AAPT2] Executing: aapt2 dump strings %s", apkPath)
+	}
 
 	if err := cmd.Run(); err != nil {
-		log.Printf("[AAPT2] Command failed: %v (stderr: %s)", err, stderr.String())
+		if a.cfg.Verbose {
+			log.Printf("[AAPT2] Command failed: %v (stderr: %s)", err, stderr.String())
+		}
 		return nil, fmt.Errorf("aapt2 dump strings failed: %w (stderr: %s)", err, stderr.String())
 	}
 
 	output := stdout.String()
-	log.Printf("[AAPT2] Strings output length: %d bytes, found %d lines", len(output), len(strings.Split(output, "\n")))
+	if a.cfg.Verbose {
+		log.Printf("[AAPT2] Strings output length: %d bytes, found %d lines", len(output), len(strings.Split(output, "\n")))
+	}
 	lines := strings.Split(output, "\n")
 	var extractedStrings []string
 	seen := make(map[string]bool)
@@ -277,6 +311,10 @@ func (a *AAPT2Extractor) ExtractStrings(ctx context.Context, apkPath string) ([]
 			seen[value] = true
 			extractedStrings = append(extractedStrings, value)
 		}
+	}
+
+	if !a.cfg.Verbose && len(extractedStrings) > 0 {
+		log.Printf("✓ Extracted %d unique strings from APK", len(extractedStrings))
 	}
 
 	return extractedStrings, nil

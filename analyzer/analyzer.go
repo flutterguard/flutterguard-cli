@@ -32,7 +32,7 @@ func NewAnalyzer(cfg *Config) *Analyzer {
 		cfg:                     cfg,
 		decompiler:              NewDecompiler(cfg),
 		extractor:               NewPatternExtractor(validateDNS),
-		aapt2:                   NewAAPT2Extractor(),
+		aapt2:                   NewAAPT2Extractor(cfg),
 		certAnalyzer:            NewCertificateAnalyzer(),
 		advancedServiceDetector: NewAdvancedServiceDetector(),
 		envExtractor:            NewEnvExtractor(),
@@ -60,8 +60,7 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 		aapt2Data, err := a.aapt2.ExtractMetadata(ctx, apkPath)
 		if err == nil {
 			results.AAPT2Metadata = aapt2Data
-		} else {
-
+		} else if a.cfg.Verbose {
 			fmt.Printf("Warning: AAPT2 extraction failed: %v\n", err)
 		}
 	}
@@ -372,8 +371,7 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 		certInfo, err := a.certAnalyzer.AnalyzeCertificates(ctx, decompDir)
 		if err == nil {
 			results.CertificateInfo = certInfo
-		} else {
-
+		} else if a.cfg.Verbose {
 			fmt.Printf("Warning: Certificate analysis failed: %v\n", err)
 		}
 	}

@@ -13,10 +13,11 @@ import (
 // JadxDecompiler uses JADX to decompile APKs to Java source code
 // Best for non-Flutter apps or when you need full Java source
 type JadxDecompiler struct {
+	cfg *Config
 }
 
 func NewJadxDecompiler(cfg *Config) *JadxDecompiler {
-	return &JadxDecompiler{}
+	return &JadxDecompiler{cfg: cfg}
 }
 
 func (d *JadxDecompiler) Name() string {
@@ -48,7 +49,11 @@ func (d *JadxDecompiler) Decompile(ctx context.Context, apkPath, outputDir strin
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 
 		timeout := baseTimeout + (time.Duration(attempt-1) * 10 * time.Minute)
-		log.Printf("JADX decompilation attempt %d/%d (timeout: %v) for %s", attempt, maxRetries, timeout, apkPath)
+		if d.cfg.Verbose {
+			log.Printf("JADX decompilation attempt %d/%d (timeout: %v) for %s", attempt, maxRetries, timeout, apkPath)
+		} else if attempt == 1 {
+			log.Printf("→ Decompiling APK with JADX...")
+		}
 
 		cmdCtx, cancel := context.WithTimeout(ctx, timeout)
 
@@ -65,7 +70,9 @@ func (d *JadxDecompiler) Decompile(ctx context.Context, apkPath, outputDir strin
 		if err != nil {
 			cancel()
 			if attempt < maxRetries {
-				log.Printf("Failed to get stderr pipe, retrying... (attempt %d/%d)", attempt, maxRetries)
+				if d.cfg.Verbose {
+					log.Printf("Failed to get stderr pipe, retrying... (attempt %d/%d)", attempt, maxRetries)
+				}
 				time.Sleep(time.Duration(attempt*2) * time.Second)
 				continue
 			}
@@ -75,7 +82,9 @@ func (d *JadxDecompiler) Decompile(ctx context.Context, apkPath, outputDir strin
 		if err := cmd.Start(); err != nil {
 			cancel()
 			if attempt < maxRetries {
-				log.Printf("Failed to start jadx, retrying... (attempt %d/%d): %v", attempt, maxRetries, err)
+				if d.cfg.Verbose {
+					log.Printf("Failed to start jadx, retrying... (attempt %d/%d): %v", attempt, maxRetries, err)
+				}
 				time.Sleep(time.Duration(attempt*2) * time.Second)
 				continue
 			}
@@ -86,7 +95,7 @@ func (d *JadxDecompiler) Decompile(ctx context.Context, apkPath, outputDir strin
 			scanner := bufio.NewScanner(stderr)
 			for scanner.Scan() {
 				line := scanner.Text()
-				if strings.Contains(strings.ToLower(line), "error") {
+				if d.cfg.Verbose && strings.Contains(strings.ToLower(line), "error") {
 					log.Printf("JADX error: %s", line)
 				}
 			}
@@ -96,12 +105,20 @@ func (d *JadxDecompiler) Decompile(ctx context.Context, apkPath, outputDir strin
 		cancel()
 
 		if err == nil {
-			log.Printf("JADX decompilation succeeded on attempt %d", attempt)
+			if d.cfg.Verbose {
+				log.Printf("JADX decompilation succeeded on attempt %d", attempt)
+			} else {
+				log.Printf("✓ Decompilation completed successfully")
+			}
 			return nil
 		}
 
 		if attempt < maxRetries {
-			log.Printf("JADX attempt %d failed, retrying... Error: %v", attempt, err)
+			if d.cfg.Verbose {
+				log.Printf("JADX attempt %d failed, retrying... Error: %v", attempt, err)
+			} else {
+				log.Printf("↻ Retrying decompilation (attempt %d/%d)...", attempt+1, maxRetries)
+			}
 			time.Sleep(time.Duration(attempt*2) * time.Second)
 			continue
 		}
