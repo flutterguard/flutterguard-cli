@@ -1,5 +1,9 @@
 # FlutterGuard CLI 🔍
 
+<div align="center">
+  <img src="https://flutterguard.dev/logo.png" alt="FlutterGuard Logo" width="200" height="200">
+</div>
+
 A powerful command-line tool for analyzing Flutter Android apps to discover security issues, secrets, API endpoints, and more. FlutterGuard runs completely offline on your machine—no cloud services, no tracking, just local analysis.
 
 ## What It Does
