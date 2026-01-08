@@ -1,32 +1,37 @@
 package cmd
 
-	rootCmd.SetHelpTemplate(`FlutterGuard CLI - Analyze Flutter Android APKs for security insights
+import (
+	"fmt"
+	"os"
+	"path/filepath"
 
-Usage:
-	{{.UseLine}}
+	"github.com/spf13/cobra"
+)
 
-{{if .HasAvailableFlags}}Options:
-{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
-{{end}}
-{{if .HasAvailableSubCommands}}Commands:
-{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-	{{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}
-{{end}}
-Examples:
-	# Analyze APK with structured output (recommended)
-	{{.CommandPath}} --apk app.apk --outDir ./results --verbose
+const Version = "0.9.3"
 
-	# Quick text report
-	{{.CommandPath}} --apk app.apk --format text
+// CLIConfig holds CLI options passed via flags
+type CLIConfig struct {
+	OutputFormat        string
+	OutputDir           string
+	Verbose             bool
+	EnableNetworkAndDNS bool
+}
 
-	# Offline analysis (default)
-	{{.CommandPath}} --apk app.apk --outDir ./results
+var (
+	apkPath     string
+	cfg         CLIConfig
+	showVersion bool
+)
 
-	# Enable network checks for full validation
-	{{.CommandPath}} --apk app.apk --outDir ./results --enable-network-and-dns-checks
-
-More info: https://github.com/flutterguard/flutterguard-cli
-`)
+var rootCmd = &cobra.Command{
+	Use:   "flutterguard",
+	Short: "FlutterGuard CLI - Analyze Flutter Android APKs for security insights",
+	Long:  "FlutterGuard CLI is a tool to analyze Flutter Android APKs for security issues, misconfigurations, and sensitive data exposure.",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if len(os.Args) == 1 {
+			_ = cmd.Help()
+			os.Exit(0)
 		}
 		return nil
 	},
@@ -75,26 +80,19 @@ More info: https://github.com/flutterguard/flutterguard-cli
 }
 
 func init() {
+	rootCmd.SetHelpTemplate(`FlutterGuard CLI - Analyze Flutter Android APKs for security insights
 
-	rootCmd.SetHelpTemplate(`   ___ _       _   _             ___                     _ 
-  / __\ |_   _| |_| |_ ___ _ __ / _ \/\ /\  __ _ _ __ __| |
- / _\ | | | | | __| __/ _ \ '__/ /_\/ / \ \/ _` + "`" + ` | '__/ _` + "`" + ` |
-/ /   | | |_| | |_| ||  __/ | / /_\\\ \_/ / (_| | | | (_| |
-\/    |_|\__,_|\__|\__\___|_| \____/ \___/ \__,_|_|  \__,_|
-                                                           
-
-USAGE:
+Usage:
   {{.UseLine}}
 
-
-
-{{end}}{{if .HasAvailableFlags}}OPTIONS:
+{{if .HasAvailableFlags}}Options:
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
-
-{{end}}{{if .HasAvailableSubCommands}}COMMANDS:
+{{end}}
+{{if .HasAvailableSubCommands}}Commands:
 {{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
   {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}
-{{end}}EXAMPLES:
+{{end}}
+Examples:
   # Analyze APK with structured output (recommended)
   {{.CommandPath}} --apk app.apk --outDir ./results --verbose
 
@@ -107,13 +105,12 @@ USAGE:
   # Enable network checks for full validation
   {{.CommandPath}} --apk app.apk --outDir ./results --enable-network-and-dns-checks
 
-For more information, visit: https://github.com/flutterguard/flutterguard-cli
+More info: https://github.com/flutterguard/flutterguard-cli
 `)
 }
 
 // Execute runs the root Cobra command
 func Execute() {
-
 	rootCmd.Flags().StringVar(&apkPath, "apk", "", "Flutter app APK file to analyze")
 	rootCmd.Flags().StringVar(&cfg.OutputFormat, "format", "json", "Output format: json or text (used when --outDir not set)")
 	rootCmd.Flags().StringVar(&cfg.OutputDir, "outDir", "", "Output directory for structured results (creates folder with app package name), if not set, outputs to stdout")
