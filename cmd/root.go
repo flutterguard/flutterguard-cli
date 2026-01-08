@@ -1,38 +1,32 @@
 package cmd
 
-import (
-	"fmt"
-	"os"
-	"path/filepath"
+	rootCmd.SetHelpTemplate(`FlutterGuard CLI - Analyze Flutter Android APKs for security insights
 
-	"github.com/spf13/cobra"
-)
+Usage:
+	{{.UseLine}}
 
-const Version = "0.9.3"
+{{if .HasAvailableFlags}}Options:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
+{{end}}
+{{if .HasAvailableSubCommands}}Commands:
+{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+	{{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}
+{{end}}
+Examples:
+	# Analyze APK with structured output (recommended)
+	{{.CommandPath}} --apk app.apk --outDir ./results --verbose
 
-// CLIConfig holds CLI options passed via flags
-type CLIConfig struct {
-	OutputFormat        string
-	OutputDir           string
-	Verbose             bool
-	EnableNetworkAndDNS bool
-}
+	# Quick text report
+	{{.CommandPath}} --apk app.apk --format text
 
-var (
-	apkPath     string
-	cfg         CLIConfig
-	showVersion bool
-)
+	# Offline analysis (default)
+	{{.CommandPath}} --apk app.apk --outDir ./results
 
-var rootCmd = &cobra.Command{
-	Use:   "flutterguard",
-	Short: "FlutterGuard CLI - Analyze Flutter Android APKs for security insights",
-	Long:  "FlutterGuard CLI is a tool to analyze Flutter Android APKs for security issues, misconfigurations, and sensitive data exposure.",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	# Enable network checks for full validation
+	{{.CommandPath}} --apk app.apk --outDir ./results --enable-network-and-dns-checks
 
-		if len(os.Args) == 1 {
-			_ = cmd.Help()
-			os.Exit(0)
+More info: https://github.com/flutterguard/flutterguard-cli
+`)
 		}
 		return nil
 	},
