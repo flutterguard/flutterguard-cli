@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +26,8 @@ var stageDescriptions = map[string]string{
 }
 
 func runAnalysis(apkPath string, config *CLIConfig) error {
+
+	configureLogging(config.Verbose)
 
 	cliCfg := &analyzer.Config{
 		DisableNetworkChecks: !config.EnableNetworkAndDNS,
@@ -92,6 +95,16 @@ func displayVerboseProgress(evt analyzer.ProgressEvent) {
 	if evt.Percent >= 100 {
 		fmt.Fprintf(os.Stderr, "\n")
 	}
+}
+
+func configureLogging(verbose bool) {
+	log.SetOutput(os.Stderr)
+	if verbose {
+		log.SetFlags(log.LstdFlags)
+		return
+	}
+	// Friendly, timestamp-free logs for normal mode
+	log.SetFlags(0)
 }
 
 func displaySimpleProgress(evt analyzer.ProgressEvent, lastStage *string, lastPercent *int) {
