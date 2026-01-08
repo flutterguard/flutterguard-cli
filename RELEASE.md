@@ -97,14 +97,3 @@ git push origin vX.Y.Z --force
 ```
 
 After pushing, monitor the run at your repository’s Actions page.
-
-## Continuous Integration
-
-Every push to `main` or `develop` branches runs:
-
-- Code formatting checks (`go fmt`)
-- Static analysis (`go vet`)
-- Unit tests (`go test`)
-- Build verification
-
-Failures in CI will prevent merges to main.
