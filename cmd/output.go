@@ -230,19 +230,30 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 		targetSDK = results.AppInfo.TargetSDK
 	}
 
-	fmt.Fprintf(os.Stderr, "\n📊 Analysis Results\n")
-	fmt.Fprintf(os.Stderr, "   Saved to: %s\n", outDir)
+	fmt.Fprintf(os.Stderr, "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	fmt.Fprintf(os.Stderr, "📊 ANALYSIS RESULTS\n")
+	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
+	
+	// App Info Section
 	if pkg != "" {
-		if verName != "" || verCode != "" {
-			fmt.Fprintf(os.Stderr, "   App: %s (v%s, code %s)\n", pkg, safeStr(verName), safeStr(verCode))
-		} else {
-			fmt.Fprintf(os.Stderr, "   App: %s\n", pkg)
+		fmt.Fprintf(os.Stderr, "📦 APP INFORMATION\n")
+		fmt.Fprintf(os.Stderr, "   Package: %s\n", pkg)
+		if verName != "" {
+			fmt.Fprintf(os.Stderr, "   Version: %s", verName)
+			if verCode != "" {
+				fmt.Fprintf(os.Stderr, " (build %s)\n", verCode)
+			} else {
+				fmt.Fprintf(os.Stderr, "\n")
+			}
 		}
+		if minSDK != "" || targetSDK != "" {
+			fmt.Fprintf(os.Stderr, "   SDK: min %s → target %s\n", safeStr(minSDK), safeStr(targetSDK))
+		}
+		if hasDecompiled {
+			fmt.Fprintf(os.Stderr, "   Source: Full APK decompiled\n")
+		}
+		fmt.Fprintln(os.Stderr)
 	}
-	if minSDK != "" || targetSDK != "" {
-		fmt.Fprintf(os.Stderr, "   SDK: min %s, target %s\n", safeStr(minSDK), safeStr(targetSDK))
-	}
-	fmt.Fprintln(os.Stderr)
 
 	// High-level stats
 	type kv struct {
@@ -260,10 +271,9 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 		{"🔗 Services", len(results.Services)},
 		{"🎨 Assets", assetCount},
 	}
-	if hasDecompiled {
-		fmt.Fprintf(os.Stderr, "   📁 Decompiled: Full APK source\n")
-	}
+	
 	// Print stats in two columns
+	fmt.Fprintf(os.Stderr, "📊 FINDINGS SUMMARY\n")
 	printed := 0
 	for _, s := range stats {
 		if s.v > 0 {
@@ -279,6 +289,7 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 	if printed%2 != 0 {
 		fmt.Fprintln(os.Stderr)
 	}
+	fmt.Fprintln(os.Stderr)
 
 	// Highlights (top items)
 	showTop := func(title string, items []string, limit int) {
@@ -289,17 +300,18 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 		if len(items) < n {
 			n = len(items)
 		}
-		fmt.Fprintf(os.Stderr, "\n%s:\n", title)
+		fmt.Fprintf(os.Stderr, "🔝 %s (%d)\n", title, len(items))
 		for i := 0; i < n; i++ {
-			fmt.Fprintf(os.Stderr, "   • %s\n", items[i])
+			fmt.Fprintf(os.Stderr, "   ✓ %s\n", items[i])
 		}
 		if len(items) > n {
-			fmt.Fprintf(os.Stderr, "   …and %d more\n", len(items)-n)
+			fmt.Fprintf(os.Stderr, "   … and %d more\n", len(items)-n)
 		}
+		fmt.Fprintln(os.Stderr)
 	}
 
 	if len(results.Domains) > 0 {
-		showTop("Top domains", results.Domains, 5)
+		showTop("Top Domains", results.Domains, 5)
 	}
 	if len(results.APIEndpoints) > 0 {
 		eps := make([]string, 0, len(results.APIEndpoints))
@@ -310,10 +322,10 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 			}
 			eps = append(eps, fmt.Sprintf("%s %s", m, ep.URL))
 		}
-		showTop("API endpoints", eps, 5)
+		showTop("API Endpoints", eps, 5)
 	}
 	if len(results.HardcodedKeys) > 0 {
-		showTop("Potential secrets", results.HardcodedKeys, 5)
+		showTop("Potential Secrets", results.HardcodedKeys, 5)
 	}
 
 	// Security quick glance
@@ -336,61 +348,65 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 	}
 	if results.NetworkSecurity != nil {
 		if results.NetworkSecurity.CleartextAllowed {
-			securityLines = append(securityLines, "Cleartext traffic: allowed")
+			securityLines = append(securityLines, "⚠️  Cleartext traffic: ALLOWED")
 		} else {
-			securityLines = append(securityLines, "Cleartext traffic: disallowed")
+			securityLines = append(securityLines, "✓ Cleartext traffic: disabled")
 		}
 		if results.NetworkSecurity.CertificatePinning {
-			securityLines = append(securityLines, "Certificate pinning: enabled")
+			securityLines = append(securityLines, "✓ Certificate pinning: enabled")
 		}
 	}
 	if results.Obfuscation != nil && results.Obfuscation.LikelyObfuscated {
-		securityLines = append(securityLines, "Code obfuscation detected")
+		securityLines = append(securityLines, "✓ Code obfuscation: detected")
 	}
 	if len(securityLines) > 0 {
-		fmt.Fprintf(os.Stderr, "\nSecurity:\n")
+		fmt.Fprintf(os.Stderr, "🔒 SECURITY STATUS\n")
 		for _, l := range securityLines {
-			fmt.Fprintf(os.Stderr, "   • %s\n", l)
+			fmt.Fprintf(os.Stderr, "   %s\n", l)
 		}
+		fmt.Fprintln(os.Stderr)
 	}
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "\n📝 Files created:\n")
-		fmt.Fprintf(os.Stderr, "   ✓ summary.md (start here!)\n")
-		fmt.Fprintf(os.Stderr, "   ✓ analysis.json (full data)\n")
+		fmt.Fprintf(os.Stderr, "📁 FILES GENERATED IN: %s\n", outDir)
+		fmt.Fprintf(os.Stderr, "   ✓ summary.md ← START HERE!\n")
+		fmt.Fprintf(os.Stderr, "   ✓ analysis.json (full report)\n")
 		if len(results.Emails) > 0 {
-			fmt.Fprintf(os.Stderr, "   ✓ emails.txt\n")
+			fmt.Fprintf(os.Stderr, "   ✓ emails.txt (%d found)\n", len(results.Emails))
 		}
 		if len(results.Domains) > 0 {
-			fmt.Fprintf(os.Stderr, "   ✓ domains.txt\n")
+			fmt.Fprintf(os.Stderr, "   ✓ domains.txt (%d found)\n", len(results.Domains))
 		}
 		if len(allURLs) > 0 {
-			fmt.Fprintf(os.Stderr, "   ✓ urls.txt\n")
+			fmt.Fprintf(os.Stderr, "   ✓ urls.txt (%d found)\n", len(allURLs))
 		}
 		if len(results.APIEndpoints) > 0 {
-			fmt.Fprintf(os.Stderr, "   ✓ api_endpoints.txt\n")
+			fmt.Fprintf(os.Stderr, "   ✓ api_endpoints.txt (%d found)\n", len(results.APIEndpoints))
 		}
 		if len(results.Packages) > 0 {
-			fmt.Fprintf(os.Stderr, "   ✓ packages.txt\n")
+			fmt.Fprintf(os.Stderr, "   ✓ packages.txt (%d found)\n", len(results.Packages))
 		}
 		if len(results.Permissions) > 0 {
-			fmt.Fprintf(os.Stderr, "   ✓ permissions.txt\n")
+			fmt.Fprintf(os.Stderr, "   ✓ permissions.txt (%d found)\n", len(results.Permissions))
 		}
 		if len(results.HardcodedKeys) > 0 {
-			fmt.Fprintf(os.Stderr, "   ✓ hardcoded_keys.txt\n")
+			fmt.Fprintf(os.Stderr, "   ✓ hardcoded_keys.txt (%d found)\n", len(results.HardcodedKeys))
 		}
 		if len(results.Services) > 0 {
-			fmt.Fprintf(os.Stderr, "   ✓ services.txt\n")
+			fmt.Fprintf(os.Stderr, "   ✓ services.txt (%d found)\n", len(results.Services))
 		}
 		if assetCount > 0 {
-			fmt.Fprintf(os.Stderr, "   ✓ assets/ (organized by file type)\n")
+			fmt.Fprintf(os.Stderr, "   ✓ assets/ (%d files)\n", assetCount)
 		}
 		if hasDecompiled {
 			fmt.Fprintf(os.Stderr, "   ✓ decompiled/ (full APK source)\n")
 		}
+		fmt.Fprintln(os.Stderr)
 	}
 
-	fmt.Fprintf(os.Stderr, "\n💡 Tip: Open summary.md in your editor or GitHub to see everything organized!\n\n")
+	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	fmt.Fprintf(os.Stderr, "💡 Next: Open summary.md to review findings\n")
+	fmt.Fprintf(os.Stderr, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n")
 }
 
 func sanitizeFileName(name string) string {

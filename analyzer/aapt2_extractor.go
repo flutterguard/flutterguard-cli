@@ -33,7 +33,6 @@ func (a *AAPT2Extractor) IsAvailable() bool {
 	if a.cfg.Verbose {
 		log.Printf("[AAPT2] Found aapt2 at: %s", path)
 	} else {
-		log.Printf("✓ aapt2 tool found")
 	}
 	return true
 }
