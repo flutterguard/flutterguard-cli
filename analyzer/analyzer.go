@@ -52,6 +52,7 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 	}
 
 	decompDir := apkPath + "-decompiled"
+	var stageErrors []string
 
 	emitProgress(progress, 10, "init", "starting analysis")
 
@@ -60,8 +61,12 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 		aapt2Data, err := a.aapt2.ExtractMetadata(ctx, apkPath)
 		if err == nil {
 			results.AAPT2Metadata = aapt2Data
-		} else if a.cfg.Verbose {
-			fmt.Printf("Warning: AAPT2 extraction failed: %v\n", err)
+		} else {
+			msg := fmt.Sprintf("AAPT2 extraction failed: %v", err)
+			stageErrors = append(stageErrors, msg)
+			if a.cfg.Verbose {
+				fmt.Fprintf(os.Stderr, "Warning: %s\n", msg)
+			}
 		}
 	}
 
@@ -69,7 +74,14 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 
 	decompResult, err := a.decompiler.DecompileWithStrategies(ctx, apkPath, decompDir)
 	if err != nil {
-		return nil, fmt.Errorf("stage decompile: %w", err)
+		msg := fmt.Sprintf("Decompilation failed: %v", err)
+		stageErrors = append(stageErrors, msg)
+		if a.cfg.Verbose {
+			fmt.Fprintf(os.Stderr, "Warning: %s\n", msg)
+		}
+		// Can't continue without decompilation, return partial results
+		results.Errors = stageErrors
+		return results, nil
 	}
 
 	emitProgress(progress, 20, "decompile", "completed")
@@ -87,306 +99,431 @@ func (a *Analyzer) AnalyzeAPK(ctx context.Context, apkPath string, progress Prog
 		var err error
 		libappContent, err = os.ReadFile(libappPath)
 		if err != nil {
-			return nil, fmt.Errorf("stage libapp: %w", err)
+			msg := fmt.Sprintf("Reading libapp.so failed: %v", err)
+			stageErrors = append(stageErrors, msg)
+			if a.cfg.Verbose {
+				fmt.Fprintf(os.Stderr, "Warning: %s\n", msg)
+			}
+		} else {
+			contentStr = string(libappContent)
 		}
-		contentStr = string(libappContent)
 	} else {
 		var err error
 		contentStr, err = a.decompiler.ReadDecompiledSources(decompDir)
 		if err != nil {
-			return nil, fmt.Errorf("stage sources: %w", err)
+			msg := fmt.Sprintf("Reading decompiled sources failed: %v", err)
+			stageErrors = append(stageErrors, msg)
+			if a.cfg.Verbose {
+				fmt.Fprintf(os.Stderr, "Warning: %s\n", msg)
+			}
 		}
+	}
+
+	// If we have neither contentStr nor libappContent, can't continue
+	if contentStr == "" && len(libappContent) == 0 {
+		results.Errors = stageErrors
+		return results, nil
 	}
 
 	emitProgress(progress, 30, "extract", "scan strings")
-
-	rawEmails := a.extractor.ExtractEmails(contentStr)
-	for _, email := range rawEmails {
-		if a.emailValidator.ValidateEmail(email) {
-			results.Emails = append(results.Emails, email)
-		}
-	}
-
-	emitProgress(progress, 35, "extract", "urls/emails")
-
-	rawURLs := a.extractor.ExtractURLs(contentStr)
-	urls := make(map[string][]string)
-
-	for scheme, urlList := range rawURLs {
-		validURLs := []string{}
-		for _, rawURL := range urlList {
-			if valid, _ := a.urlValidator.ValidateURL(rawURL); valid {
-				validURLs = append(validURLs, rawURL)
+	defer func() { results.Errors = stageErrors }()
+	// Extraction stages
+	var urls map[string][]string // <-- move declaration here for wider scope
+	if contentStr != "" {
+		// Emails
+		defer func() { recover() }()
+		rawEmails := a.extractor.ExtractEmails(contentStr)
+		for _, email := range rawEmails {
+			if a.emailValidator.ValidateEmail(email) {
+				results.Emails = append(results.Emails, email)
 			}
 		}
-		urls[scheme] = validURLs
-	}
 
-	results.URLs.HTTP = urls["http"]
-	results.URLs.HTTPS = urls["https"]
-	results.URLs.FTP = urls["ftp"]
-	results.URLs.WS = urls["ws"]
-	results.URLs.WSS = urls["wss"]
-	results.URLs.File = urls["file"]
-	results.URLs.Content = urls["content"]
-	results.URLs.Other = urls["other"]
+		emitProgress(progress, 35, "extract", "urls/emails")
+		// URLs
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "URL extraction failed")
+				}
+			}()
+			rawURLs := a.extractor.ExtractURLs(contentStr)
+			urls = make(map[string][]string)
+			for scheme, urlList := range rawURLs {
+				validURLs := []string{}
+				for _, rawURL := range urlList {
+					if valid, _ := a.urlValidator.ValidateURL(rawURL); valid {
+						validURLs = append(validURLs, rawURL)
+					}
+				}
+				urls[scheme] = validURLs
+			}
+			results.URLs.HTTP = urls["http"]
+			results.URLs.HTTPS = urls["https"]
+			results.URLs.FTP = urls["ftp"]
+			results.URLs.WS = urls["ws"]
+			results.URLs.WSS = urls["wss"]
+			results.URLs.File = urls["file"]
+			results.URLs.Content = urls["content"]
+			results.URLs.Other = urls["other"]
+		}()
 
-	emitProgress(progress, 40, "extract", "domains/endpoints")
-
-	rawDomains := a.extractor.ExtractDomains(contentStr)
-	for _, domain := range rawDomains {
-		if valid, _ := a.domainValidator.ValidateDomain(domain); valid {
-			results.Domains = append(results.Domains, domain)
+		emitProgress(progress, 40, "extract", "domains/endpoints")
+		// Domains
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "Domain extraction failed")
+				}
+			}()
+			rawDomains := a.extractor.ExtractDomains(contentStr)
+			for _, domain := range rawDomains {
+				if valid, _ := a.domainValidator.ValidateDomain(domain); valid {
+					results.Domains = append(results.Domains, domain)
+				}
+			}
+		}()
+		// IPs
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "IP extraction failed")
+				}
+			}()
+			results.IPAddresses = a.extractor.ExtractIPAddresses(contentStr)
+		}()
+		// API Endpoints
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "API endpoint extraction failed")
+				}
+			}()
+			if urls == nil {
+				urls = make(map[string][]string)
+			}
+			rawAPIEndpoints := a.extractor.ExtractEndpointsWithDomain(contentStr, urls)
+			for _, endpoint := range rawAPIEndpoints {
+				if a.endpointValidator.ValidateFullEndpointURL(endpoint.URL) {
+					results.APIEndpoints = append(results.APIEndpoints, endpoint)
+				}
+			}
+		}()
+		// Endpoints without domain
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "EndpointsNoDomain extraction failed")
+				}
+			}()
+			results.EndpointsNoDomain = a.extractor.ExtractEndpointsNoDomain(contentStr)
+		}()
+		// Potential endpoints
+		results.PotentialEndpointsFull = uniqueStrings(append(results.URLs.HTTP, results.URLs.HTTPS...))
+		results.PotentialEndpointsRoutes = uniqueStrings(results.EndpointsNoDomain)
+		// HTTP requests
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "HTTP request extraction failed")
+				}
+			}()
+			results.HTTPRequests = a.extractor.ExtractHTTPRequests(contentStr)
+			results.RequestHeaders = a.extractor.ExtractRequestHeaders(contentStr)
+		}()
+		// Method channels
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "Method channel extraction failed")
+				}
+			}()
+			results.MethodChannels = a.extractor.ExtractMethodChannels(contentStr)
+		}()
+		emitProgress(progress, 45, "extract", "contacts/imports")
+		// Phone numbers
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "Phone number extraction failed")
+				}
+			}()
+			results.PhoneNumbers = a.extractor.ExtractPhoneNumbers(contentStr)
+		}()
+		// Imports
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "Imports extraction failed")
+				}
+			}()
+			results.Imports = a.extractor.ExtractImports(contentStr)
+		}()
+		emitProgress(progress, 50, "packages", "detect packages")
+		// Packages
+		var packageNames []string
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "Package extraction failed")
+				}
+			}()
+			results.AppPackageName = a.extractor.ExtractAppPackageName(contentStr)
+			packageNames = a.extractor.ExtractPackages(contentStr, results.AppPackageName)
+		}()
+		// Enrich packages with pub.dev data only when network checks enabled
+		var enrichedData map[string]*PubDevPackageScore
+		if !a.cfg.DisableNetworkChecks {
+			enrichCtx, enrichCancel := context.WithTimeout(ctx, 35*time.Second)
+			defer enrichCancel()
+			enrichedData = a.pubDevClient.EnrichPackages(enrichCtx, packageNames)
+		} else {
+			enrichedData = make(map[string]*PubDevPackageScore)
 		}
-	}
-
-	results.IPAddresses = a.extractor.ExtractIPAddresses(contentStr)
-
-	rawAPIEndpoints := a.extractor.ExtractEndpointsWithDomain(contentStr, urls)
-	for _, endpoint := range rawAPIEndpoints {
-
-		if a.endpointValidator.ValidateFullEndpointURL(endpoint.URL) {
-			results.APIEndpoints = append(results.APIEndpoints, endpoint)
+		for _, pkg := range packageNames {
+			packageInfo := models.Package{
+				Name: pkg,
+				URL:  fmt.Sprintf("https://pub.dev/packages/%s", pkg),
+			}
+			if enrichment, ok := enrichedData[pkg]; ok && enrichment != nil {
+				packageInfo.GrantedPoints = enrichment.GrantedPoints
+				packageInfo.MaxPoints = enrichment.MaxPoints
+				packageInfo.LikeCount = enrichment.LikeCount
+				packageInfo.DownloadCount30Days = enrichment.DownloadCount30Days
+				packageInfo.Tags = enrichment.Tags
+			}
+			results.Packages = append(results.Packages, packageInfo)
 		}
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					stageErrors = append(stageErrors, "AppPackagePaths extraction failed")
+				}
+			}()
+			results.AppPackagePaths = a.extractor.ExtractAppPackagePaths(contentStr, results.AppPackageName)
+		}()
 	}
-
-	results.EndpointsNoDomain = a.extractor.ExtractEndpointsNoDomain(contentStr)
-
-	results.PotentialEndpointsFull = uniqueStrings(append(results.URLs.HTTP, results.URLs.HTTPS...))
-	results.PotentialEndpointsRoutes = uniqueStrings(results.EndpointsNoDomain)
-
-	results.HTTPRequests = a.extractor.ExtractHTTPRequests(contentStr)
-	results.RequestHeaders = a.extractor.ExtractRequestHeaders(contentStr)
-
-	results.MethodChannels = a.extractor.ExtractMethodChannels(contentStr)
-
-	emitProgress(progress, 45, "extract", "contacts/imports")
-
-	results.PhoneNumbers = a.extractor.ExtractPhoneNumbers(contentStr)
-
-	results.Imports = a.extractor.ExtractImports(contentStr)
-
-	emitProgress(progress, 50, "packages", "detect packages")
-
-	results.AppPackageName = a.extractor.ExtractAppPackageName(contentStr)
-	packageNames := a.extractor.ExtractPackages(contentStr, results.AppPackageName)
-
-	// Enrich packages with pub.dev data only when network checks enabled
-	var enrichedData map[string]*PubDevPackageScore
-	if !a.cfg.DisableNetworkChecks {
-		enrichCtx, enrichCancel := context.WithTimeout(ctx, 35*time.Second)
-		defer enrichCancel()
-		enrichedData = a.pubDevClient.EnrichPackages(enrichCtx, packageNames)
-	} else {
-		enrichedData = make(map[string]*PubDevPackageScore)
-	}
-
-	for _, pkg := range packageNames {
-		packageInfo := models.Package{
-			Name: pkg,
-			URL:  fmt.Sprintf("https://pub.dev/packages/%s", pkg),
-		}
-
-		if enrichment, ok := enrichedData[pkg]; ok && enrichment != nil {
-			packageInfo.GrantedPoints = enrichment.GrantedPoints
-			packageInfo.MaxPoints = enrichment.MaxPoints
-			packageInfo.LikeCount = enrichment.LikeCount
-			packageInfo.DownloadCount30Days = enrichment.DownloadCount30Days
-			packageInfo.Tags = enrichment.Tags
-		}
-
-		results.Packages = append(results.Packages, packageInfo)
-	}
-	results.AppPackagePaths = a.extractor.ExtractAppPackagePaths(contentStr, results.AppPackageName)
 
 	emitProgress(progress, 60, "manifest", "permissions & debug flags")
-
-	results.Permissions = a.decompiler.ExtractManifestPermissions(decompDir)
-	if len(results.Permissions) == 0 && results.AAPT2Metadata != nil {
-		var permStrings []string
-		permStrings = append(permStrings, results.AAPT2Metadata.Permissions...)
-		if results.AAPT2Metadata.Badging != nil {
-			permStrings = append(permStrings, results.AAPT2Metadata.Badging.UsesPermissions...)
-		}
-
-		seen := make(map[string]bool)
-		for _, p := range permStrings {
-			if p == "" || seen[p] {
-				continue
+	// Manifest and debug info
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				stageErrors = append(stageErrors, "Manifest/permissions extraction failed")
 			}
-			seen[p] = true
-			results.Permissions = append(results.Permissions, models.Permission{
-				Name:        p,
-				Dangerous:   isDangerousPermission(p),
-				Description: getPermissionDescription(p),
+		}()
+		results.Permissions = a.decompiler.ExtractManifestPermissions(decompDir)
+		if len(results.Permissions) == 0 && results.AAPT2Metadata != nil {
+			var permStrings []string
+			permStrings = append(permStrings, results.AAPT2Metadata.Permissions...)
+			if results.AAPT2Metadata.Badging != nil {
+				permStrings = append(permStrings, results.AAPT2Metadata.Badging.UsesPermissions...)
+			}
+			seen := make(map[string]bool)
+			for _, p := range permStrings {
+				if p == "" || seen[p] {
+					continue
+				}
+				seen[p] = true
+				results.Permissions = append(results.Permissions, models.Permission{
+					Name:        p,
+					Dangerous:   isDangerousPermission(p),
+					Description: getPermissionDescription(p),
+				})
+			}
+		}
+		results.DebugInfo = &models.DebugInfo{ManifestDebuggable: a.decompiler.IsDebuggable(decompDir)}
+		if results.DebugInfo.ManifestDebuggable {
+			results.DebugInfo.Indicators = append(results.DebugInfo.Indicators, "AndroidManifest debuggable=true")
+		}
+		if fb := a.decompiler.FindFirebaseConfig(decompDir); fb != nil {
+			results.Firebase = fb
+		}
+	}()
+
+	// Services
+	var services []models.ServiceUsage
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				stageErrors = append(stageErrors, "Service detection failed")
+			}
+		}()
+		detectedServices := a.advancedServiceDetector.DetectAllServices(contentStr, results.Domains)
+		services = append(services, detectedServices...)
+		firebaseDomains := []string{
+			"firebaseio.com",
+			"firebasestorage.googleapis.com",
+			"firebaseapp.com",
+			"googleapis.com",
+			"gstatic.com",
+		}
+		if containsAny(results.Domains, firebaseDomains) || results.Firebase != nil {
+			fbService := models.ServiceUsage{
+				Name:       "Firebase",
+				Domains:    filterDomains(results.Domains, firebaseDomains),
+				Packages:   filterPackages(results.Packages, []string{"firebase_", "cloud_firestore"}),
+				Indicators: []string{"Firebase SDK detected"},
+			}
+			alreadyDetected := false
+			for _, svc := range services {
+				if svc.Name == "Firebase" {
+					alreadyDetected = true
+					break
+				}
+			}
+			if !alreadyDetected {
+				services = append(services, fbService)
+			}
+		}
+		if containsAny(results.Domains, []string{"supabase.co"}) || containsAny(results.Imports, []string{"supabase_flutter", "postgrest"}) {
+			services = append(services, models.ServiceUsage{
+				Name:       "Supabase",
+				Domains:    filterDomains(results.Domains, []string{"supabase.co"}),
+				Packages:   filterPackages(results.Packages, []string{"supabase_", "postgrest"}),
+				Indicators: []string{"Supabase domain or packages present"},
 			})
 		}
-	}
-
-	results.DebugInfo = &models.DebugInfo{ManifestDebuggable: a.decompiler.IsDebuggable(decompDir)}
-	if results.DebugInfo.ManifestDebuggable {
-		results.DebugInfo.Indicators = append(results.DebugInfo.Indicators, "AndroidManifest debuggable=true")
-	}
-
-	if fb := a.decompiler.FindFirebaseConfig(decompDir); fb != nil {
-		results.Firebase = fb
-	}
-
-	// Service usage heuristic (Firebase, Supabase, Stripe)
-	var services []models.ServiceUsage
-
-	detectedServices := a.advancedServiceDetector.DetectAllServices(contentStr, results.Domains)
-	services = append(services, detectedServices...)
-
-	firebaseDomains := []string{
-		"firebaseio.com",
-		"firebasestorage.googleapis.com",
-		"firebaseapp.com",
-		"googleapis.com",
-		"gstatic.com",
-	}
-	if containsAny(results.Domains, firebaseDomains) || results.Firebase != nil {
-		fbService := models.ServiceUsage{
-			Name:       "Firebase",
-			Domains:    filterDomains(results.Domains, firebaseDomains),
-			Packages:   filterPackages(results.Packages, []string{"firebase_", "cloud_firestore"}),
-			Indicators: []string{"Firebase SDK detected"},
+		stripeKeys := a.extractor.DetectServiceKeys(contentStr)
+		if len(stripeKeys) > 0 || containsAny(results.Domains, []string{"stripe.com", "api.stripe.com"}) {
+			services = append(services, models.ServiceUsage{
+				Name:       "Stripe",
+				Domains:    filterDomains(results.Domains, []string{"stripe.com", "api.stripe.com"}),
+				Packages:   filterPackages(results.Packages, []string{"stripe_", "flutter_stripe"}),
+				Keys:       maskKeys(stripeKeys),
+				Indicators: []string{"Stripe publishable key or domain detected"},
+			})
 		}
+		results.Services = services
+	}()
 
-		alreadyDetected := false
-		for _, svc := range services {
-			if svc.Name == "Firebase" {
-				alreadyDetected = true
-				break
+	// AppInfo
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				stageErrors = append(stageErrors, "App metadata extraction failed")
 			}
-		}
-		if !alreadyDetected {
-			services = append(services, fbService)
-		}
-	}
-
-	if containsAny(results.Domains, []string{"supabase.co"}) || containsAny(results.Imports, []string{"supabase_flutter", "postgrest"}) {
-		services = append(services, models.ServiceUsage{
-			Name:       "Supabase",
-			Domains:    filterDomains(results.Domains, []string{"supabase.co"}),
-			Packages:   filterPackages(results.Packages, []string{"supabase_", "postgrest"}),
-			Indicators: []string{"Supabase domain or packages present"},
-		})
-	}
-
-	stripeKeys := a.extractor.DetectServiceKeys(contentStr)
-	if len(stripeKeys) > 0 || containsAny(results.Domains, []string{"stripe.com", "api.stripe.com"}) {
-		services = append(services, models.ServiceUsage{
-			Name:       "Stripe",
-			Domains:    filterDomains(results.Domains, []string{"stripe.com", "api.stripe.com"}),
-			Packages:   filterPackages(results.Packages, []string{"stripe_", "flutter_stripe"}),
-			Keys:       maskKeys(stripeKeys),
-			Indicators: []string{"Stripe publishable key or domain detected"},
-		})
-	}
-	results.Services = services
-
-	results.AppInfo = a.decompiler.ExtractAppMetadata(decompDir, apkPath, contentStr)
+		}()
+		results.AppInfo = a.decompiler.ExtractAppMetadata(decompDir, apkPath, contentStr)
+	}()
 
 	emitProgress(progress, 65, "services", "service detection")
 
-	results.SQLCommands = a.extractor.ExtractSQLCommands(contentStr)
-	results.SQLiteDatabases = a.extractor.ExtractSQLiteDatabases(contentStr)
-
-	results.HardcodedKeys = uniqueStrings(a.detectHardcodedKeys(contentStr))
-	results.InstallSourceHints = uniqueStrings(a.detectInstallSources(contentStr))
-	results.EnvironmentHints = uniqueStrings(a.detectEnvironmentHints(contentStr))
-
-	results.CDNs = a.cdnUIDetector.DetectCDNs(contentStr, results.Domains, results.URLs)
-
-	results.CDNUsage = uniqueStrings(a.detectCDNs(contentStr, urls))
+	// SQL, keys, hints, CDNs
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				stageErrors = append(stageErrors, "SQL/keys/hints/CDN extraction failed")
+			}
+		}()
+		results.SQLCommands = a.extractor.ExtractSQLCommands(contentStr)
+		results.SQLiteDatabases = a.extractor.ExtractSQLiteDatabases(contentStr)
+		results.HardcodedKeys = uniqueStrings(a.detectHardcodedKeys(contentStr))
+		results.InstallSourceHints = uniqueStrings(a.detectInstallSources(contentStr))
+		results.EnvironmentHints = uniqueStrings(a.detectEnvironmentHints(contentStr))
+		results.CDNs = a.cdnUIDetector.DetectCDNs(contentStr, results.Domains, results.URLs)
+		// Use the urls map from earlier extraction for detectCDNs
+		var cdnUrls map[string][]string
+		if urls != nil {
+			cdnUrls = urls
+		} else {
+			cdnUrls = map[string][]string{}
+		}
+		results.CDNUsage = uniqueStrings(a.detectCDNs(contentStr, cdnUrls))
+	}()
 
 	emitProgress(progress, 70, "assets", "scan env/config/content")
 
-	results.EnvData = a.envExtractor.ExtractEnvFiles(decompDir)
-	results.EnvFiles = a.scanForFiles(decompDir, []string{".env"}, true)
-	emitProgress(progress, 75, "assets", ".env files")
-
-	results.ConfigFiles = a.scanForFiles(decompDir, []string{".json", ".yaml", ".yml", ".xml", ".properties", ".ini"}, true)
-	emitProgress(progress, 85, "assets", "config files")
-
-	results.ContentFiles = a.scanForFiles(decompDir, []string{".md", ".txt", ".html", ".htm", ".css", ".js"}, true)
-	emitProgress(progress, 90, "assets", "content files")
-
-	results.VisualAssets = a.scanForFiles(decompDir,
-		[]string{".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp", ".ico", ".ttf", ".mp3", ".mp4", ".avi", ".wav"},
-		true)
-
-	emitProgress(progress, 95, "assets", "visual assets")
-
-	appIcon := a.findAppIcon(results.VisualAssets)
-	if appIcon != "" {
-		results.AppInfo.AppIconPath = appIcon
-	}
-
-	allFiles := append([]models.FileInfo{}, results.VisualAssets...)
-	allFiles = append(allFiles, results.ConfigFiles...)
-	allFiles = append(allFiles, results.EnvFiles...)
-	allFiles = append(allFiles, results.ContentFiles...)
-	results.AssetSizes = a.computeAssetSizes(allFiles)
-
-	results.FileTypes = a.analyzeFileTypes(decompDir)
-
-	results.UILibraries = a.cdnUIDetector.DetectUILibraries(contentStr, results.VisualAssets, results.Packages)
-
-	uiInfo := a.extractor.DetectUIComponents(contentStr, results.VisualAssets)
-	if libs, ok := uiInfo["ui_libraries"].([]string); ok {
-		results.UIComponents = &models.UIComponentInfo{}
-		results.UIComponents.Libraries = libs
-		if lf, ok := uiInfo["lottie_files"].([]string); ok {
-			results.UIComponents.LottieFiles = lf
+	// Asset scanning
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				stageErrors = append(stageErrors, "Asset/env/config/content scan failed")
+			}
+		}()
+		results.EnvData = a.envExtractor.ExtractEnvFiles(decompDir)
+		results.EnvFiles = a.scanForFiles(decompDir, []string{".env"}, true)
+		emitProgress(progress, 75, "assets", ".env files")
+		results.ConfigFiles = a.scanForFiles(decompDir, []string{".json", ".yaml", ".yml", ".xml", ".properties", ".ini"}, true)
+		emitProgress(progress, 85, "assets", "config files")
+		results.ContentFiles = a.scanForFiles(decompDir, []string{".md", ".txt", ".html", ".htm", ".css", ".js"}, true)
+		emitProgress(progress, 90, "assets", "content files")
+		results.VisualAssets = a.scanForFiles(decompDir,
+			[]string{".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp", ".ico", ".ttf", ".mp3", ".mp4", ".avi", ".wav"},
+			true)
+		emitProgress(progress, 95, "assets", "visual assets")
+		appIcon := a.findAppIcon(results.VisualAssets)
+		if appIcon != "" {
+			results.AppInfo.AppIconPath = appIcon
 		}
-		if lc, ok := uiInfo["lottie_count"].(int); ok {
-			results.UIComponents.LottieCount = lc
+		allFiles := append([]models.FileInfo{}, results.VisualAssets...)
+		allFiles = append(allFiles, results.ConfigFiles...)
+		allFiles = append(allFiles, results.EnvFiles...)
+		allFiles = append(allFiles, results.ContentFiles...)
+		results.AssetSizes = a.computeAssetSizes(allFiles)
+		results.FileTypes = a.analyzeFileTypes(decompDir)
+		results.UILibraries = a.cdnUIDetector.DetectUILibraries(contentStr, results.VisualAssets, results.Packages)
+		uiInfo := a.extractor.DetectUIComponents(contentStr, results.VisualAssets)
+		if libs, ok := uiInfo["ui_libraries"].([]string); ok {
+			results.UIComponents = &models.UIComponentInfo{}
+			results.UIComponents.Libraries = libs
+			if lf, ok := uiInfo["lottie_files"].([]string); ok {
+				results.UIComponents.LottieFiles = lf
+			}
+			if lc, ok := uiInfo["lottie_count"].(int); ok {
+				results.UIComponents.LottieCount = lc
+			}
 		}
-	}
-
-	results.SDKBloat = a.analyzeSDAKBloat(results.Packages, results.AppInfo.APKSize)
-
-	decompZipPath, err := a.createDecompZip(decompDir)
-	if err == nil && decompZipPath != "" {
-		decompInfo, _ := os.Stat(decompZipPath)
-		if decompInfo != nil {
-			results.DecompiledFolderPath = decompZipPath
-
-			results.ContentFiles = append(results.ContentFiles, models.FileInfo{
-				Name: "decompiled_sources.zip",
-				Path: decompZipPath,
-				Size: decompInfo.Size(),
-			})
+		results.SDKBloat = a.analyzeSDAKBloat(results.Packages, results.AppInfo.APKSize)
+		decompZipPath, err := a.createDecompZip(decompDir)
+		if err == nil && decompZipPath != "" {
+			decompInfo, _ := os.Stat(decompZipPath)
+			if decompInfo != nil {
+				results.DecompiledFolderPath = decompZipPath
+				results.ContentFiles = append(results.ContentFiles, models.FileInfo{
+					Name: "decompiled_sources.zip",
+					Path: decompZipPath,
+					Size: decompInfo.Size(),
+				})
+			}
 		}
-	}
+		results.Fingerprints = &models.BinaryFingerprints{
+			APKSHA256:    fileSHA256(apkPath),
+			LibappSHA256: sha256String(libappContent),
+		}
+	}()
 
-	results.Fingerprints = &models.BinaryFingerprints{
-		APKSHA256:    fileSHA256(apkPath),
-		LibappSHA256: sha256String(libappContent),
-	}
-
+	// Certificate analysis
 	if a.certAnalyzer.IsAvailable() {
 		certInfo, err := a.certAnalyzer.AnalyzeCertificates(ctx, decompDir)
 		if err == nil {
 			results.CertificateInfo = certInfo
-		} else if a.cfg.Verbose {
-			fmt.Printf("Warning: Certificate analysis failed: %v\n", err)
+		} else {
+			msg := fmt.Sprintf("Certificate analysis failed: %v", err)
+			stageErrors = append(stageErrors, msg)
+			if a.cfg.Verbose {
+				fmt.Fprintf(os.Stderr, "Warning: %s\n", msg)
+			}
 		}
 	}
 
-	results.NetworkSecurity = a.detectNetworkSecurity(decompDir)
-	results.DataStorage = a.detectDataStorage(contentStr)
-	results.WebViewSecurity = a.detectWebViewSecurity(contentStr)
-	results.Obfuscation = a.detectObfuscation(contentStr, decompDir)
-	results.DeepLinks = a.detectDeepLinks(decompDir)
-	results.SDKAnalysis = a.detectThirdPartySDKs(results.Packages, contentStr)
-
-	results.Summary = a.generateSummary(results)
-	emitProgress(progress, 100, "done", "analysis complete")
-
-	results.DecompiledDirPath = decompDir
+	// Security and summary
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				stageErrors = append(stageErrors, "Security/summary analysis failed")
+			}
+		}()
+		results.NetworkSecurity = a.detectNetworkSecurity(decompDir)
+		results.DataStorage = a.detectDataStorage(contentStr)
+		results.WebViewSecurity = a.detectWebViewSecurity(contentStr)
+		results.Obfuscation = a.detectObfuscation(contentStr, decompDir)
+		results.DeepLinks = a.detectDeepLinks(decompDir)
+		results.SDKAnalysis = a.detectThirdPartySDKs(results.Packages, contentStr)
+		results.Summary = a.generateSummary(results)
+		emitProgress(progress, 100, "done", "analysis complete")
+		results.DecompiledDirPath = decompDir
+	}()
 
 	return results, nil
 }

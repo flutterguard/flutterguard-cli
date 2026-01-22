@@ -97,6 +97,7 @@ type TechnicalDetails struct {
 
 // Results contains all extracted information
 type Results struct {
+	Errors                   []string                 `json:"errors,omitempty"`
 	Emails                   []string                 `json:"emails,omitempty"`
 	Domains                  []string                 `json:"domains,omitempty"`
 	IPAddresses              []string                 `json:"ip_addresses,omitempty"`

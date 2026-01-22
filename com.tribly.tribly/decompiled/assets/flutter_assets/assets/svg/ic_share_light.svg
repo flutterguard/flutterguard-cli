@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="52px" height="56px" viewBox="0 0 52 56" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>ic_share_light</title>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
+        <g id="ic_share_light" transform="translate(3.000000, 3.000000)" stroke="#8F3A98" stroke-width="5">
+            <path d="M38.3334,50 C42.5676,50 46.0001,46.6421 46.0001,42.5 C46.0001,38.3579 42.5676,35 38.3334,35 C34.0992,35 30.6667,38.3579 30.6667,42.5 C30.6667,46.6421 34.0992,50 38.3334,50 Z" id="Vector"></path>
+            <path d="M7.6667,32.5 C11.9009,32.5 15.3333,29.1421 15.3333,25 C15.3333,20.8579 11.9009,17.5 7.6667,17.5 C3.43248,17.5 0,20.8579 0,25 C0,29.1421 3.43248,32.5 7.6667,32.5 Z" id="Vector_2"></path>
+            <line x1="14.2856" y1="28.775" x2="31.7401" y2="38.725" id="Vector_3"></line>
+            <path d="M38.3334,15 C42.5676,15 46.0001,11.6421 46.0001,7.5 C46.0001,3.35786 42.5676,0 38.3334,0 C34.0992,0 30.6667,3.35786 30.6667,7.5 C30.6667,11.6421 34.0992,15 38.3334,15 Z" id="Vector_4"></path>
+            <line x1="31.7145" y1="11.275" x2="14.2856" y2="21.225" id="Vector_5"></line>
+        </g>
+    </g>
+</svg>
