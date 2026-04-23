@@ -8,17 +8,18 @@ import (
 	models "github.com/flutterguard/flutterguard-cli/models"
 )
 
-func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo) string {
+// FormatMarkdownSummaryWithAI is like FormatMarkdownSummary, but injects AI remediation sections if provided.
+func FormatMarkdownSummaryWithAI(results *models.Results, allAssets []models.FileInfo, aiRemediation map[string]string) string {
 	var md strings.Builder
 
 	addGap := func() {
 		md.WriteString("\n\n")
 	}
 
-	md.WriteString("# FlutterGuard Analysis Report\n\n")
+	md.WriteString("# Application Security and Compliance Report\n\n")
 
-	md.WriteString("## 📋 Table of Contents\n\n")
-	md.WriteString("- [App Information](#app-information)\n")
+	md.WriteString("## Table of Contents\n\n")
+	md.WriteString("- [Application Information](#application-information)\n")
 	if results.CertificateInfo != nil {
 		md.WriteString("- [Certificate Information](#certificate-information)\n")
 	}
@@ -48,7 +49,7 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 		md.WriteString("- [Permissions](#permissions) - [View File](permissions.txt)\n")
 	}
 	if len(results.Packages) > 0 {
-		md.WriteString("- [Flutter Packages](#flutter-packages) - [View File](packages.txt)\n")
+		md.WriteString("- [Dependencies](#dependencies) - [View File](packages.txt)\n")
 	}
 	if len(allAssets) > 0 {
 		md.WriteString("- [Assets](#assets) - [View Folder](assets/)\n")
@@ -58,76 +59,12 @@ func formatMarkdownSummary(results *models.Results, allAssets []models.FileInfo)
 	}
 	md.WriteString("\n---\n\n")
 
-	md.WriteString("## 🎯 App Information\n\n")
+	md.WriteString("## Application Information\n\n")
 	if results.AppInfo.PackageName != "" {
-		md.WriteString(fmt.Sprintf("- **Package Name:** `%s`\n", results.AppInfo.PackageName))
-		md.WriteString(fmt.Sprintf("- **Version:** %s (%s)\n", results.AppInfo.VersionName, results.AppInfo.VersionCode))
-		md.WriteString(fmt.Sprintf("- **Min SDK:** %s\n", results.AppInfo.MinSDKVersion))
-		md.WriteString(fmt.Sprintf("- **Target SDK:** %s\n", results.AppInfo.TargetSDK))
-	}
-	addGap()
-
-	if results.CertificateInfo != nil {
-		md.WriteString("## 📜 Certificate Information\n\n")
-		if len(results.CertificateInfo.Certificates) > 0 {
-			c := results.CertificateInfo.Certificates[0]
-			md.WriteString(fmt.Sprintf("- **File:** `%s`\n", c.FileName))
-			md.WriteString(fmt.Sprintf("- **Issuer:** %s\n", c.Issuer))
-			md.WriteString(fmt.Sprintf("- **Subject:** %s\n", c.Subject))
-			md.WriteString(fmt.Sprintf("- **Valid From:** %s\n", c.ValidFrom))
-			md.WriteString(fmt.Sprintf("- **Valid To:** %s\n", c.ValidTo))
-			if c.IsSelfSigned {
-				md.WriteString("- ⚠️ **Self-signed certificate**\n")
-			}
-			if c.IsExpired {
-				md.WriteString("- ❌ **Certificate expired**\n")
-			}
-		}
-		if len(results.CertificateInfo.SecurityNotes) > 0 {
-			md.WriteString("\n**Security Notes:**\n")
-			for _, n := range results.CertificateInfo.SecurityNotes {
-				md.WriteString(fmt.Sprintf("- %s\n", n))
-			}
-		}
-		addGap()
-	}
-
-	if len(results.Emails) > 0 {
-		md.WriteString(fmt.Sprintf("## 📧 Emails\n\n**Total Found:** %d → [View All](emails.txt)\n\n", len(results.Emails)))
-		md.WriteString("**Sample (first 10):**\n\n")
-		for i, email := range results.Emails {
-			if i >= 10 {
-				break
-			}
-			md.WriteString(fmt.Sprintf("- `%s`\n", email))
-		}
-		if len(results.Emails) > 10 {
-			md.WriteString(fmt.Sprintf("\n*... and %d more in [emails.txt](emails.txt)*\n", len(results.Emails)-10))
-		}
-		addGap()
-	}
-
-	if len(results.Domains) > 0 {
-		md.WriteString(fmt.Sprintf("## 🌐 Domains\n\n**Total Found:** %d → [View All](domains.txt)\n\n", len(results.Domains)))
-		md.WriteString("**Sample (first 10):**\n\n")
-		for i, domain := range results.Domains {
-			if i >= 10 {
-				break
-			}
-			md.WriteString(fmt.Sprintf("- `%s`\n", domain))
-		}
-		if len(results.Domains) > 10 {
-			md.WriteString(fmt.Sprintf("\n*... and %d more in [domains.txt](domains.txt)*\n", len(results.Domains)-10))
-		}
-		addGap()
-	}
-
-	if len(allURLs) > 0 {
-		md.WriteString(fmt.Sprintf("## 🔗 URLs\n\n**Total Found:** %d → [View All](urls.txt)\n\n", len(allURLs)))
-		md.WriteString(fmt.Sprintf("- HTTP: %d\n", len(results.URLs.HTTP)))
-		md.WriteString(fmt.Sprintf("- HTTPS: %d\n", len(results.URLs.HTTPS)))
-		md.WriteString(fmt.Sprintf("- Other: %d\n", len(results.URLs.FTP)+len(results.URLs.WS)+len(results.URLs.WSS)+len(results.URLs.File)+len(results.URLs.Content)+len(results.URLs.Other)))
-		addGap()
+		md.WriteString(fmt.Sprintf("- Package Name: %s\n", results.AppInfo.PackageName))
+		md.WriteString(fmt.Sprintf("- Version: %s (%s)\n", results.AppInfo.VersionName, results.AppInfo.VersionCode))
+		md.WriteString(fmt.Sprintf("- Minimum SDK: %s\n", results.AppInfo.MinSDKVersion))
+		md.WriteString(fmt.Sprintf("- Target SDK: %s\n", results.AppInfo.TargetSDK))
 	}
 
 	if len(results.APIEndpoints) > 0 {

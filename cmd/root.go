@@ -16,6 +16,10 @@ type CLIConfig struct {
 	OutputDir           string
 	Verbose             bool
 	EnableNetworkAndDNS bool
+	EnableAIRemediation bool
+	AIProvider          string
+	AIKey               string
+	AIBaseURL           string
 }
 
 var (
@@ -111,11 +115,16 @@ More info: https://github.com/flutterguard/flutterguard-cli
 
 // Execute runs the root Cobra command
 func Execute() {
+
 	rootCmd.Flags().StringVar(&apkPath, "apk", "", "Flutter app APK file to analyze")
 	rootCmd.Flags().StringVar(&cfg.OutputFormat, "format", "json", "Output format: json or text (used when --outDir not set)")
 	rootCmd.Flags().StringVar(&cfg.OutputDir, "outDir", "", "Output directory for structured results (creates folder with app package name), if not set, outputs to stdout")
 	rootCmd.Flags().BoolVar(&cfg.Verbose, "verbose", false, "Enable verbose output")
 	rootCmd.Flags().BoolVar(&cfg.EnableNetworkAndDNS, "enable-network-and-dns-checks", false, "Enable DNS validation and network enrichment for all domains, endpoints, packages... (default: offline)")
+	rootCmd.Flags().BoolVar(&cfg.EnableAIRemediation, "ai-remediation", false, "Enable AI-powered remediation guidance for scan results (experimental)")
+	rootCmd.Flags().StringVar(&cfg.AIProvider, "ai-provider", "openai", "AI provider for remediation guidance (openai, gemini, claude, openrouter, xai)")
+	rootCmd.Flags().StringVar(&cfg.AIKey, "ai-key", os.Getenv("FLUTTERGUARD_AI_KEY"), "API key for the selected AI provider (or set FLUTTERGUARD_AI_KEY env var)")
+	rootCmd.Flags().StringVar(&cfg.AIBaseURL, "ai-baseurl", os.Getenv("FLUTTERGUARD_AI_BASEURL"), "Custom base URL for AI provider (optional)")
 	rootCmd.Flags().BoolVar(&showVersion, "version", false, "Show version information")
 
 	_ = rootCmd.MarkFlagRequired("apk")

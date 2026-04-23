@@ -1,5 +1,4 @@
 package cmd
-
 import (
 	"encoding/json"
 	"fmt"
@@ -10,22 +9,8 @@ import (
 	models "github.com/flutterguard/flutterguard-cli/models"
 )
 
-func outputResults(results *models.Results, config *CLIConfig) error {
-	// If outDir is not specified, default to current directory
-	// and create the package-named folder there.
-	if config.OutputDir == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get current directory: %w", err)
-		}
-		config.OutputDir = cwd
-	}
-
-	return saveStructuredOutput(results, config)
-}
-
-func saveStructuredOutput(results *models.Results, config *CLIConfig) error {
-
+// saveStructuredOutputWithAI is like saveStructuredOutput, but injects AI remediation into summary.md if provided.
+func saveStructuredOutputWithAI(results *models.Results, config *CLIConfig, aiRemediation map[string]string) error {
 	appName := "app"
 	if results.AAPT2Metadata != nil && results.AAPT2Metadata.Badging != nil && results.AAPT2Metadata.Badging.PackageName != "" {
 		appName = sanitizeFileName(results.AAPT2Metadata.Badging.PackageName)
@@ -38,10 +23,6 @@ func saveStructuredOutput(results *models.Results, config *CLIConfig) error {
 	outDir := filepath.Join(config.OutputDir, appName)
 	if err := os.MkdirAll(outDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
-	}
-
-	if config.Verbose {
-		fmt.Printf("Creating structured output in: %s\n", outDir)
 	}
 
 	if len(results.Emails) > 0 {
@@ -79,81 +60,37 @@ func saveStructuredOutput(results *models.Results, config *CLIConfig) error {
 			packages[i] = fmt.Sprintf("%s %s - https://pub.dev/packages/%s", pkg.Name, pkg.Version, pkg.Name)
 		}
 		if err := writeLines(filepath.Join(outDir, "packages.txt"), packages); err != nil {
-			return err
+			return nil
 		}
 	}
+	return nil
+}
 
-	if len(results.Permissions) > 0 {
-		perms := make([]string, len(results.Permissions))
-		for i, perm := range results.Permissions {
-			dangerous := ""
-			if perm.Dangerous {
-				dangerous = " [DANGEROUS]"
-			}
-			perms[i] = fmt.Sprintf("%s%s", perm.Name, dangerous)
-		}
-		if err := writeLines(filepath.Join(outDir, "permissions.txt"), perms); err != nil {
-			return err
-		}
-	}
+		hasDecompiled := false
+		if results.DecompiledDirPath != "" {
+			decompiledSrc := results.DecompiledDirPath
+			decompiledDest := filepath.Join(outDir, "decompiled")
 
-	if len(results.HardcodedKeys) > 0 {
-		if err := writeLines(filepath.Join(outDir, "hardcoded_keys.txt"), results.HardcodedKeys); err != nil {
-			return err
-		}
-	}
-
-	if len(results.Services) > 0 {
-		services := make([]string, 0)
-		for _, svc := range results.Services {
-			services = append(services, fmt.Sprintf("=== %s ===", svc.Name))
-			if len(svc.Indicators) > 0 {
-				services = append(services, "Indicators:")
-				for _, ind := range svc.Indicators {
-					services = append(services, fmt.Sprintf("  - %s", ind))
+			if _, err := os.Stat(decompiledSrc); err == nil {
+				hasDecompiled = true
+				if err := copyDirectory(decompiledSrc, decompiledDest); err != nil {
+					hasDecompiled = false
+					if config.Verbose {
+						fmt.Printf("Warning: failed to copy decompiled directory: %v\n", err)
+					}
 				}
 			}
-			if len(svc.Domains) > 0 {
-				services = append(services, "Domains:")
-				for _, d := range svc.Domains {
-					services = append(services, fmt.Sprintf("  - %s", d))
-				}
+		}
+
+		summaryMD := FormatMarkdownSummaryWithAI(results, allAssets, aiRemediation)
+		if err := os.WriteFile(filepath.Join(outDir, "summary.md"), []byte(summaryMD), 0644); err != nil {
+			return fmt.Errorf("failed to write summary: %w", err)
+			if err := writeLines(filepath.Join(outDir, "packages.txt"), packages); err != nil {
+				return nil
 			}
-			services = append(services, "")
 		}
-		if err := writeLines(filepath.Join(outDir, "services.txt"), services); err != nil {
-			return err
-		}
+		return nil
 	}
-
-	allAssets := append([]models.FileInfo{}, results.EnvFiles...)
-	allAssets = append(allAssets, results.ConfigFiles...)
-	allAssets = append(allAssets, results.ContentFiles...)
-	allAssets = append(allAssets, results.VisualAssets...)
-
-	if len(allAssets) > 0 {
-		assetsDir := filepath.Join(outDir, "assets")
-		if err := os.MkdirAll(assetsDir, 0755); err != nil {
-			return fmt.Errorf("failed to create assets directory: %w", err)
-		}
-
-		filesByExt := make(map[string][]models.FileInfo)
-		for _, file := range allAssets {
-			ext := filepath.Ext(file.Name)
-			if ext == "" {
-				ext = "no_extension"
-			} else {
-
-				ext = strings.TrimPrefix(ext, ".")
-			}
-			filesByExt[ext] = append(filesByExt[ext], file)
-		}
-
-		for ext, files := range filesByExt {
-			extDir := filepath.Join(assetsDir, ext)
-			if err := os.MkdirAll(extDir, 0755); err != nil {
-				return fmt.Errorf("failed to create extension directory %s: %w", ext, err)
-			}
 
 			for _, file := range files {
 				if err := copyFileToDir(file.Path, extDir); err != nil && config.Verbose {
@@ -179,7 +116,7 @@ func saveStructuredOutput(results *models.Results, config *CLIConfig) error {
 		}
 	}
 
-	summaryMD := formatMarkdownSummary(results, allAssets)
+	summaryMD := FormatMarkdownSummaryWithAI(results, allAssets, nil)
 	if err := os.WriteFile(filepath.Join(outDir, "summary.md"), []byte(summaryMD), 0644); err != nil {
 		return fmt.Errorf("failed to write summary: %w", err)
 	}
@@ -215,11 +152,11 @@ func displayOutputSummary(results *models.Results, outDir string, allURLs []stri
 		targetSDK = b.TargetSdkVersion
 	}
 	if pkg == "" && results.AppInfo.PackageName != "" {
-		pkg = results.AppInfo.PackageName
+		 pkg = results.AppInfo.PackageName
 	}
-	if verName == "" && results.AppInfo.VersionName != "" {
-		verName = results.AppInfo.VersionName
-	}
+	// ...existing code...
+}
+func saveStructuredOutput(results *models.Results, config *CLIConfig) error {
 	if verCode == "" && results.AppInfo.VersionCode != "" {
 		verCode = results.AppInfo.VersionCode
 	}

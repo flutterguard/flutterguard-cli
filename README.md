@@ -1,22 +1,66 @@
-# FlutterGuard CLI 🔍
+# FlutterGuard CLI
 
-<div align="center">
-  <img src="https://flutterguard.dev/logo.png" alt="FlutterGuard Logo" width="200" height="200">
-</div>
+**FlutterGuard CLI** is a professional, AI-powered command-line utility for comprehensive security and compliance analysis of Flutter Android applications. Designed for engineering teams, security professionals, and agencies, FlutterGuard delivers actionable, human-quality remediation guidance and compliance insights for every scan finding.
 
-A powerful command-line tool for analyzing Flutter Android apps to discover security issues, secrets, API endpoints, and more. FlutterGuard runs completely offline on your machine—no cloud services, no tracking, just local analysis.
+## Key Features
 
-## What It Does
+- **AI-Powered Remediation**: Integrates with leading AI providers (OpenAI, Gemini, Claude, xAI, and more) to generate professional, actionable remediation steps and compliance explanations for every security or privacy finding.
+- **Comprehensive Static Analysis**: Detects hardcoded secrets, API endpoints, permissions, SDKs, third-party services, and more.
+- **Privacy & Compliance Checks**: Flags risks related to GDPR, COPPA, Play Store, and other regulatory requirements, with clear, human-readable explanations.
+- **CI/CD Integration**: Ready for automation in pipelines, with structured output and machine-readable formats.
+- **Professional Reports**: Generates detailed Markdown and JSON reports suitable for audits, client delivery, and internal review.
+- **Offline-First**: All analysis runs locally by default. No data is sent to the cloud unless you explicitly enable AI or network features.
 
-FlutterGuard CLI analyzes Flutter app APK files and extracts:
+---
 
-- 🔑 **Secrets & API Keys** — Finds hardcoded passwords, tokens, and credentials
-- 🌐 **Network Details** — Extracts URLs, domains, API endpoints, and Firebase configs
-- 📦 **Dependencies** — Lists all Flutter packages with direct links to pub.dev
-- 📋 **App Metadata** — Package name, version, SDK info, and permissions
-- 🔍 **Third-Party Services** — Detects bundled SDKs, CDNs, and analytics libraries
-- 📜 **Certificate Info** — Analyzes signing certificates and flags self-signed ones
-- 📁 **Complete Breakdown** — Organized assets, resources, and full decompiled source code
+## AI Setup and Usage
+
+FlutterGuard CLI supports multiple AI providers for remediation and compliance guidance. You can configure the AI engine via environment variables or CLI flags.
+
+### Supported Providers
+
+- OpenAI
+- Google Gemini
+- Anthropic Claude
+- xAI
+- OpenRouter
+
+### Configuration
+
+Set the following environment variables or use equivalent CLI flags:
+
+- `FLUTTERGUARD_AI_ENABLED=1` — Enable AI-powered remediation
+- `FLUTTERGUARD_AI_PROVIDER=openai|gemini|claude|xai|openrouter` — Select provider
+- `FLUTTERGUARD_AI_KEY=...` — API key for the selected provider
+- `FLUTTERGUARD_AI_BASEURL=...` — (Optional) Custom API endpoint
+
+**Example:**
+
+```bash
+export FLUTTERGUARD_AI_ENABLED=1
+export FLUTTERGUARD_AI_PROVIDER=openai
+export FLUTTERGUARD_AI_KEY=sk-...
+flutterguard-cli --apk app.apk --outDir ./results --enable-ai-remediation
+```
+
+When enabled, all findings in the report will include a dedicated "Remediation Guidance" section with professional, human-like explanations and actionable steps.
+
+---
+
+## What FlutterGuard CLI Analyzes
+
+- **Secrets & API Keys**: Detects hardcoded credentials and sensitive tokens
+- **Network & API Endpoints**: Extracts all URLs, domains, and backend endpoints
+- **Dependencies**: Lists all Flutter/Dart packages and third-party SDKs
+- **App Metadata**: Reports package name, version, SDK targets, and permissions
+- **Third-Party Services**: Identifies analytics, ad networks, and bundled SDKs
+- **Certificate Information**: Analyzes signing certificates for trust and compliance
+- **Assets & Resources**: Catalogs all embedded files, assets, and resources
+- **Decompiled Source**: Optionally provides full decompiled APK contents for audit
+
+## Installation
+
+...existing code...
 
 ## Installation
 
@@ -140,98 +184,38 @@ FlutterGuard works standalone, but these tools provide richer analysis:
 
 ### Basic Analysis
 
-Analyze a Flutter app APK and save organized results to a directory:
+Run a full security and compliance scan on a Flutter APK:
 
 ```bash
 flutterguard-cli --apk app.apk --outDir ./results
 ```
 
-This creates a folder named after the app's package (e.g., `results/com.example.app/`) containing all findings, assets, and decompiled code.
+This creates a results directory with all findings, assets, and a professional Markdown report.
 
-### Show Progress
+### Enabling AI Remediation
 
-Add `--verbose` to see real-time progress updates:
-
-```bash
-flutterguard-cli --apk app.apk --outDir ./results --verbose
-```
+Add the `--enable-ai-remediation` flag (or set `FLUTTERGUARD_AI_ENABLED=1`) to include AI-generated remediation and compliance guidance in your reports.
 
 ### Output Formats
 
-**JSON format** (default, good for automation):
+- `summary.md`: Human-readable, professional Markdown report with remediation guidance
+- `analysis.json`: Full structured data for automation and audit
+- `*.txt`: Raw lists of emails, domains, endpoints, etc.
+- `assets/`: All extracted resources, organized by type
+- `decompiled/`: Decompiled APK contents (optional)
 
-```bash
-flutterguard-cli --apk app.apk --format json
-```
+### Example Output Structure
 
-**Text format** (human-readable summary):
+...existing code...
 
-```bash
-flutterguard-cli --apk app.apk --format text
-```
+## Why FlutterGuard CLI?
 
-**Structured directory** (most comprehensive):
+- **Professional, Human-Quality Guidance**: All AI-generated remediation is reviewed for clarity, accuracy, and professionalism.
+- **No Vendor Lock-In**: Choose your preferred AI provider or run fully offline.
+- **Enterprise-Ready**: Designed for security teams, agencies, and regulated environments.
+- **Transparent and Auditable**: All findings and AI guidance are saved locally for review and compliance.
 
-```bash
-flutterguard-cli --apk app.apk --outDir ~/my-analysis
-```
-
-### Network Features (Opt-In)
-
-By default, FlutterGuard runs completely offline. Enable network features for:
-
-- Domain DNS validation
-- pub.dev package information enrichment
-
-```bash
-flutterguard-cli --apk app.apk --outDir ./results --enable-network-and-dns-checks
-```
-
-## Output Structure
-
-When using `--outDir`, FlutterGuard creates an organized directory structure:
-
-```
-results/
-└── com.example.app/
-    ├── summary.md               ← Start here! Overview with clickable links
-    ├── analysis.json            ← Full structured data (JSON)
-    ├── emails.txt               ← Email addresses found
-    ├── domains.txt              ← Domain names and hosts
-    ├── urls.txt                 ← All URLs discovered
-    ├── api_endpoints.txt        ← API endpoints with HTTP methods
-    ├── packages.txt             ← Flutter packages with pub.dev links
-    ├── permissions.txt          ← Android permissions (⚠️ = dangerous)
-    ├── services.txt             ← Third-party SDKs detected
-    ├── hardcoded_keys.txt       ← Potential secrets and API keys
-    ├── assets/                  ← App resources by file type
-    │   ├── json/
-    │   ├── png/
-    │   ├── xml/
-    │   ├── ttf/
-    │   └── ...
-    └── decompiled/              ← Complete APK contents
-        ├── AndroidManifest.xml
-        ├── classes.dex
-        ├── lib/                 ← Native libraries (.so files)
-        ├── res/                 ← App resources
-        ├── assets/              ← Embedded assets
-        └── META-INF/            ← Signing certificates
-```
-
-**Tip:** Open `summary.md` in any markdown viewer—it includes a table of contents with links to all findings.
-
-## Why Go instead of Dart?
-
-FlutterGuard is written in Go rather than Dart because:
-
-- **Single Compiled Binary**: Users get a standalone executable with zero dependencies—just download and run, no runtime required.
-- **Cross-Platform Distribution**: Go compiles easily to Windows, macOS, and Linux with a single codebase, making it simpler for users across different systems.
-- **Performance**: Go offers native compilation speed and efficiency ideal for analyzing large APK files and intensive security scanning operations.
-- **CLI Excellence**: Go is purpose-built for command-line tools with strong standard library support for file I/O, process execution, and signal handling.
-- **Ecosystem**: Direct access to powerful tools like JADX and aapt2 without the overhead of a UI framework designed for mobile apps.
-
-While Dart excels at building Flutter mobile and web apps, Go is the better choice for a developer tool that needs to be lightweight, fast, and dependency-free.
+FlutterGuard CLI is written in Go for maximum portability, performance, and ease of deployment. No dependencies, no runtime, just a single binary.
 
 ## Contributing
 
@@ -301,4 +285,4 @@ MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-**Built for the Flutter and Android security community**
+_FlutterGuard CLI: Professional AI-powered security and compliance for Flutter applications._

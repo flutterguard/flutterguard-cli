@@ -1,5 +1,9 @@
 package analyzer
 
+import (
+	"github.com/flutterguard/flutterguard-cli/ai"
+)
+
 // RemediationGuide contains guidance for addressing security findings
 type RemediationGuide struct {
 	Title    string   `json:"title"`
@@ -159,4 +163,19 @@ func GetRemediationGuide(findingType string) RemediationGuide {
 		return guide
 	}
 	return guides["default"]
+}
+
+// RemediationEngine provides AI-powered remediation for findings.
+type RemediationEngine struct {
+	AI ai.AIClient
+}
+
+// NewRemediationEngine creates a new RemediationEngine with the given AI client.
+func NewRemediationEngine(client ai.AIClient) *RemediationEngine {
+	return &RemediationEngine{AI: client}
+}
+
+// ExplainFinding returns an AI-generated remediation for a finding.
+func (r *RemediationEngine) ExplainFinding(finding, context string) string {
+	return ai.ExplainWithAI(r.AI, finding, context)
 }
