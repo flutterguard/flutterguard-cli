@@ -17,6 +17,7 @@ vendor/
 
 # APK files
 apk/
+results/
 
 # IDE specific
 .vscode/
@@ -29,5 +30,5 @@ apk/
 .DS_Store
 Thumbs.db
 output/
-apk/
 .dart_tool/
+apks/

@@ -10,6 +10,7 @@ type AIConfig struct {
 	Provider ProviderType
 	APIKey   string
 	BaseURL  string
+	Model    string
 }
 
 // LoadAIConfig loads AI config from environment variables or flags.
@@ -19,5 +20,6 @@ func LoadAIConfig() *AIConfig {
 		Provider: ProviderType(os.Getenv("FLUTTERGUARD_AI_PROVIDER")),
 		APIKey:   os.Getenv("FLUTTERGUARD_AI_KEY"),
 		BaseURL:  os.Getenv("FLUTTERGUARD_AI_BASEURL"),
+		Model:    os.Getenv("FLUTTERGUARD_AI_MODEL"),
 	}
 }

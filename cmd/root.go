@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-const Version = "0.9.5"
+const Version = "0.9.6"
 
 // CLIConfig holds CLI options passed via flags
 type CLIConfig struct {
@@ -20,6 +21,7 @@ type CLIConfig struct {
 	AIProvider          string
 	AIKey               string
 	AIBaseURL           string
+	AIModel             string
 }
 
 var (
@@ -54,13 +56,24 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("unsupported output format: %s (allowed: json, text)", cfg.OutputFormat)
 		}
 
-		if _, err := os.Stat(apkPath); os.IsNotExist(err) {
+		stat, err := os.Stat(apkPath)
+		if os.IsNotExist(err) {
 			return fmt.Errorf("APK file not found: %s", apkPath)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to access APK path %s: %w", apkPath, err)
+		}
+		if stat.IsDir() {
+			return fmt.Errorf("APK path must be a file, got directory: %s", apkPath)
 		}
 
 		absPath, err := filepath.Abs(apkPath)
 		if err != nil {
 			return fmt.Errorf("failed to get absolute path: %w", err)
+		}
+
+		if err := validateAIFlags(&cfg); err != nil {
+			return err
 		}
 
 		if cfg.Verbose {
@@ -125,6 +138,7 @@ func Execute() {
 	rootCmd.Flags().StringVar(&cfg.AIProvider, "ai-provider", "openai", "AI provider for remediation guidance (openai, gemini, claude, openrouter, xai)")
 	rootCmd.Flags().StringVar(&cfg.AIKey, "ai-key", os.Getenv("FLUTTERGUARD_AI_KEY"), "API key for the selected AI provider (or set FLUTTERGUARD_AI_KEY env var)")
 	rootCmd.Flags().StringVar(&cfg.AIBaseURL, "ai-baseurl", os.Getenv("FLUTTERGUARD_AI_BASEURL"), "Custom base URL for AI provider (optional)")
+	rootCmd.Flags().StringVar(&cfg.AIModel, "ai-model", os.Getenv("FLUTTERGUARD_AI_MODEL"), "AI model to use for remediation summary (provider-specific)")
 	rootCmd.Flags().BoolVar(&showVersion, "version", false, "Show version information")
 
 	_ = rootCmd.MarkFlagRequired("apk")
@@ -133,4 +147,50 @@ func Execute() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func validateAIFlags(cfg *CLIConfig) error {
+	if !cfg.EnableAIRemediation {
+		return nil
+	}
+
+	provider := strings.ToLower(strings.TrimSpace(cfg.AIProvider))
+	if provider == "" {
+		provider = "openai"
+	}
+	cfg.AIProvider = provider
+
+	switch provider {
+	case "openai", "openrouter", "xai", "gemini", "claude":
+	default:
+		return fmt.Errorf("unsupported --ai-provider %q (allowed: openai, gemini, claude, openrouter, xai)", cfg.AIProvider)
+	}
+
+	if strings.TrimSpace(cfg.AIKey) == "" {
+		return fmt.Errorf("--ai-remediation requires an API key; pass --ai-key or set FLUTTERGUARD_AI_KEY")
+	}
+
+	if cfg.AIBaseURL == "" {
+		switch provider {
+		case "openai":
+			cfg.AIBaseURL = "https://api.openai.com/v1"
+		case "openrouter":
+			cfg.AIBaseURL = "https://openrouter.ai/api/v1"
+		case "xai":
+			cfg.AIBaseURL = "https://api.x.ai/v1"
+		}
+	}
+
+	if cfg.AIModel == "" {
+		switch provider {
+		case "openai":
+			cfg.AIModel = "gpt-4o-mini"
+		case "openrouter":
+			cfg.AIModel = "openai/gpt-4o-mini"
+		case "xai":
+			cfg.AIModel = "grok-2-latest"
+		}
+	}
+
+	return nil
 }

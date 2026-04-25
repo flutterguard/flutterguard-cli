@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/flutterguard/flutterguard-cli/analyzer"
+	"github.com/flutterguard/flutterguard-cli/models"
 )
 
 // Stage descriptions for user-friendly output
@@ -73,7 +74,7 @@ func runAnalysis(apkPath string, config *CLIConfig) error {
 		fmt.Fprintf(os.Stderr, "✅ Done in %s\n\n", formatDuration(duration))
 	}
 
-	return outputResults(results, config)
+	return outputResults(results, config, apkPath)
 }
 
 func displayVerboseProgress(evt analyzer.ProgressEvent) {
@@ -131,4 +132,14 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%dm %ds", minutes, seconds)
 	}
 	return fmt.Sprintf("%ds", seconds)
+}
+
+// outputResults writes the analysis results to the appropriate output format and directory.
+func outputResults(results *models.Results, config *CLIConfig, apkPath string) error {
+	reportDir, err := writeUnifiedScanReport(results, config, apkPath)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "\n📄 Results saved to: %s\n", reportDir)
+	return nil
 }
