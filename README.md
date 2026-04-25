@@ -47,8 +47,8 @@ Requirements:
 ```bash
 git clone https://github.com/flutterguard/flutterguard-cli.git
 cd flutterguard-cli
-go build -o build/flutterguard .
-./build/flutterguard --version
+go build -o build/flutterguard-cli .
+./build/flutterguard-cli --version
 ```
 
 ### Option 2: Install Script
@@ -78,7 +78,7 @@ FlutterGuard works without external tooling, but these can enrich analysis quali
 Run analysis for an APK:
 
 ```bash
-flutterguard --apk app-release.apk --outDir ./results
+flutterguard-cli --apk app-release.apk --outDir ./results
 ```
 
 If `--outDir` is omitted, FlutterGuard writes to `./results` by default.
@@ -88,7 +88,7 @@ If `--outDir` is omitted, FlutterGuard writes to `./results` by default.
 Basic syntax:
 
 ```bash
-flutterguard --apk <path-to-apk> [flags]
+flutterguard-cli --apk <path-to-apk> [flags]
 ```
 
 Required flag:
@@ -117,7 +117,7 @@ OpenRouter is supported through an OpenAI-compatible API workflow.
 ```bash
 export FLUTTERGUARD_AI_KEY="your_openrouter_api_key"
 
-flutterguard \
+flutterguard-cli \
   --apk "apks/app-arm64-v8a-release.apk" \
   --outDir "./results" \
   --ai-remediation \
@@ -157,13 +157,13 @@ Expected behavior:
 ### 1. Analyze a Local APK
 
 ```bash
-flutterguard --apk "apks/app-x86_64-release.apk" --outDir "./results"
+flutterguard-cli --apk "apks/app-x86_64-release.apk" --outDir "./results"
 ```
 
 ### 2. Analyze with Network Enrichment
 
 ```bash
-flutterguard \
+flutterguard-cli \
   --apk "apks/app-arm64-v8a-release.apk" \
   --outDir "./results" \
   --enable-network-and-dns-checks
@@ -174,7 +174,7 @@ flutterguard \
 ```bash
 export FLUTTERGUARD_AI_KEY="your_openai_key"
 
-flutterguard \
+flutterguard-cli \
   --apk "apks/app-arm64-v8a-release.apk" \
   --outDir "./results" \
   --ai-remediation \
@@ -185,7 +185,7 @@ flutterguard \
 ### 4. Analyze APKs with Special Characters in File Names
 
 ```bash
-flutterguard \
+flutterguard-cli \
   --apk "apks/app-arm64-v8a-release(1).apk" \
   --outDir "./results"
 ```
@@ -204,7 +204,7 @@ FlutterGuard surfaces explicit errors for common workflow issues:
 Quick checks:
 
 ```bash
-flutterguard --version
+flutterguard-cli --version
 go test ./...
 ```
 
@@ -212,7 +212,7 @@ If you suspect stale output, remove the scan folder and rerun:
 
 ```bash
 rm -rf "results/app-arm64-v8a-release"
-flutterguard --apk "apks/app-arm64-v8a-release.apk" --outDir "./results"
+flutterguard-cli --apk "apks/app-arm64-v8a-release.apk" --outDir "./results"
 ```
 
 ## Development
@@ -220,7 +220,7 @@ flutterguard --apk "apks/app-arm64-v8a-release.apk" --outDir "./results"
 Build:
 
 ```bash
-go build -o build/flutterguard .
+go build -o build/flutterguard-cli .
 ```
 
 Test:
@@ -232,7 +232,7 @@ go test ./...
 Format:
 
 ```bash
-gofmt -w .
+gofmt -w $(find . -name '*.go' -not -path './vendor/*')
 ```
 
 ## Contributing
